@@ -9,6 +9,10 @@ use crate::polynomial::poly_range_check;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
+#[cfg(feature = "fixed")]
+#[cfg_attr(docsrs, doc(cfg(feature = "fixed")))]
+pub mod fixedpoint_l2;
+
 /// The counter data type. Each measurement is `0` or `1` and the aggregate result is the sum of
 /// the measurements (i.e., the total number of `1s`).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -618,18 +622,11 @@ pub(crate) fn decode_result_vec<F: FieldElement>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::field::{random_vector, split_vector, Field64 as TestField};
+    use crate::field::{random_vector, Field64 as TestField};
     use crate::flp::gadgets::ParallelSum;
     #[cfg(feature = "multithreaded")]
     use crate::flp::gadgets::ParallelSumMultithreaded;
-
-    // Number of shares to split input and proofs into in `flp_test`.
-    const NUM_SHARES: usize = 3;
-
-    struct ValidityTestCase<F> {
-        expect_valid: bool,
-        expected_output: Option<Vec<F>>,
-    }
+    use crate::flp::types::test_utils::{flp_validity_test, ValidityTestCase};
 
     #[test]
     fn test_count() {
@@ -1003,8 +1000,22 @@ mod tests {
         assert_eq!(verifier.len(), typ.verifier_len());
         assert!(typ.decide(&verifier).unwrap());
     }
+}
 
-    fn flp_validity_test<T: Type>(
+#[cfg(test)]
+mod test_utils {
+    use super::*;
+    use crate::field::{random_vector, split_vector};
+
+    // Number of shares to split input and proofs into in `flp_test`.
+    const NUM_SHARES: usize = 3;
+
+    pub(crate) struct ValidityTestCase<F> {
+        pub expect_valid: bool,
+        pub expected_output: Option<Vec<F>>,
+    }
+
+    pub(crate) fn flp_validity_test<T: Type>(
         typ: &T,
         input: &[T::Field],
         t: &ValidityTestCase<T::Field>,
@@ -1172,3 +1183,4 @@ mod tests {
         Ok(())
     }
 }
+

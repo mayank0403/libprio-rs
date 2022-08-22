@@ -201,6 +201,37 @@ pub trait FieldElement:
 
 /// Methods common to all `FieldElement` implementations that are private to the crate.
 pub(crate) trait FieldElementExt: FieldElement {
+    /// Encode `input` as bitvector of elements of `Self`. Output is written into the `output` slice.
+    /// If `output.len()` is smaller than the number of bits required to respresent `input`,
+    /// an error is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The field element to encode
+    /// * `output` - The slice to write the encoded bits into. Least signicant bit comes first
+    fn encode_into_bitvector_representation_slice(
+        input: &Self::Integer,
+        output: &mut [Self],
+    ) -> Result<(), FieldError> {
+        // Create a mutable copy of `input`. In each iteration of the following loop we take the
+        // least significant bit, and shift input to the right by one bit.
+        let mut i = *input;
+
+        let one = Self::Integer::from(Self::one());
+        for (_, bit) in output.iter_mut().enumerate() {
+            let w = Self::from(i & one);
+            *bit = w;
+            i = i >> one;
+        }
+
+        // If `i` is still not zero, this means that it cannot be encoded by `bits` bits.
+        if i != Self::Integer::from(Self::zero()) {
+            return Err(FieldError::InputSizeMismatch);
+        }
+
+        Ok(())
+    }
+
     /// Encode `input` as `bits`-bit vector of elements of `Self` if it's small enough
     /// to be represented with that many bits.
     ///
@@ -212,24 +243,9 @@ pub(crate) trait FieldElementExt: FieldElement {
         input: &Self::Integer,
         bits: usize,
     ) -> Result<Vec<Self>, FieldError> {
-        // Create a mutable copy of `input`. In each iteration of the following loop we take the
-        // least significant bit, and shift input to the right by one bit.
-        let mut i = *input;
-
-        let one = Self::Integer::from(Self::one());
-        let mut encoded = Vec::with_capacity(bits);
-        for _ in 0..bits {
-            let w = Self::from(i & one);
-            encoded.push(w);
-            i = i >> one;
-        }
-
-        // If `i` is still not zero, this means that it cannot be encoded by `bits` bits.
-        if i != Self::Integer::from(Self::zero()) {
-            return Err(FieldError::InputSizeMismatch);
-        }
-
-        Ok(encoded)
+        let mut result = vec![Self::zero(); bits];
+        Self::encode_into_bitvector_representation_slice(input, &mut result)?;
+        Ok(result)
     }
 
     /// Decode the bitvector-represented value `input` into a simple representation as a single
@@ -267,9 +283,12 @@ pub(crate) trait FieldElementExt: FieldElement {
     /// Check if the largest number representable with `bits` bits (i.e. 2^bits - 1) is
     /// representable in this field.
     fn valid_integer_bitlength(bits: usize) -> bool {
-        if let Ok(bits_int) = Self::Integer::try_from(bits) {
-            if Self::modulus() >> bits_int != Self::Integer::from(Self::zero()) {
-                return true;
+        if bits <= 8 * Self::ENCODED_SIZE {
+            // ENCODED_SIZE is in bytes
+            if let Ok(bits_int) = Self::Integer::try_from(bits) {
+                if Self::modulus() >> bits_int != Self::Integer::from(Self::zero()) {
+                    return true;
+                }
             }
         }
         false

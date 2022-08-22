@@ -96,6 +96,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "az"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f771a5d1f5503f7f4279a30f3643d3421ba149848b89ecaaec0ea2acf04a5ac4"
+
+[[package]]
 name = "backtrace"
 version = "0.3.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -148,6 +154,12 @@ name = "bumpalo"
 version = "3.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63396b8a4b9de3f4fdfb320ab6080762242f66a8ef174c49d8e19b674db4cdbe"
+
+[[package]]
+name = "bytemuck"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c53dfa917ec274df8ed3c572698f381a24eef2efba9492d797301b72b6db408a"
 
 [[package]]
 name = "byteorder"
@@ -430,6 +442,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "fixed"
+version = "1.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93db1ca4ef0496cc54f43660fcb423bc16ced939b8fdd9749e7abcd5674f1803"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "typenum",
+]
+
+[[package]]
+name = "fixed-macro"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f6b2cae66e4989f93364a38a59a12e1830afe3201c7c11e5ea8727534831fbe"
+dependencies = [
+ "fixed",
+ "fixed-macro-impl",
+ "fixed-macro-types",
+]
+
+[[package]]
+name = "fixed-macro-impl"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "787fa8e0bf88449e84799f4b440a15bd1958c4552a80abc568d5ba9e20a4283e"
+dependencies = [
+ "fixed",
+ "paste",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "fixed-macro-types"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13c7241f3a037641b460153db21d5611c789e7e0504bf52e20a9b4bbe1d7cc00"
+dependencies = [
+ "fixed",
+ "fixed-macro-impl",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -673,6 +732,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20448fd678ec04e6ea15bbe0476874af65e98a01515d667aa49f1434dc44ebf4"
 
 [[package]]
+name = "paste"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -736,6 +801,8 @@ dependencies = [
  "cmac",
  "criterion",
  "ctr 0.9.1",
+ "fixed",
+ "fixed-macro",
  "getrandom",
  "hex",
  "itertools",

@@ -31,6 +31,10 @@ rayon = { version = "1.5.3", optional = true }
 aes-gcm = { version = "^0.9", optional = true }
 ring = { version = "0.16.20", optional = true }
 
+# dependencies required if feature "fixed" is enabled
+fixed = { version = "1.15", optional = true }
+fixed-macro = { version = "1.1.1", optional = true }
+
 [dev-dependencies]
 assert_matches = "1.5.0"
 criterion = "0.3"
@@ -49,6 +53,7 @@ test-util = ["rand", "serde_json"]
 multithreaded = ["rayon"]
 prio2 = ["aes-gcm", "ring"]
 crypto-dependencies = ["aes", "ctr", "cmac"]
+fixed = ["dep:fixed", "fixed-macro"]
 
 [workspace]
 members = [".", "binaries"]
