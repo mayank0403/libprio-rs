@@ -195,7 +195,7 @@ impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
         // into the field.
         let bits_per_entry: usize = (<T as Fixed>::INT_NBITS + <T as Fixed>::FRAC_NBITS)
             .try_into()
-            .map_err(|_| FlpError::Encode(format!("Could not convert u32 into usize.")))?;
+            .map_err(|_| FlpError::Encode("Could not convert u32 into usize.".to_string()))?;
         if !F::valid_integer_bitlength(bits_per_entry) {
             return Err(FlpError::Encode(format!(
                 "fixed point type bit length ({}) too large for field modulus",
@@ -231,7 +231,7 @@ impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
         };
         F::valid_integer_try_from(usize_max_norm_value)?;
 
-        let res = Ok(Self {
+        Ok(Self {
             bits_per_entry,
             entries,
             bits_for_norm,
@@ -242,8 +242,7 @@ impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
             // range constants
             range_norm_begin: entries * bits_per_entry,
             range_norm_end: entries * bits_per_entry + bits_for_norm,
-        });
-        res
+        })
     }
 }
 
