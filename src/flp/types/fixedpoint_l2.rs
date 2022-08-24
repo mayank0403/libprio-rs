@@ -77,7 +77,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  *  (4) The computed and submitted norms are treated very similar to the vector
  *      entries, but they have a different number of bits, namely 2n-2.
  *  (5) As the aggregation result is a pointwise sum of the client vectors,
- *      the numbers no longer (semantically) lie in the range [-1,1], and cannot
+ *      the numbers no longer (semantically) lie in the range [-1,1), and cannot
  *      be represented by the same fixed point type as the input. Instead the
  *      decoding happens directly into a vector of floats.
  *
