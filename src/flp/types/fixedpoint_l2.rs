@@ -181,7 +181,7 @@ pub struct FixedPointBoundedL2VecSum<T: Fixed, F: FieldElement> {
 }
 
 impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
-    /// Return a new [`FixedPointL2BoundedVecSum`] type parameter. Each value of this type is a
+    /// Return a new [`FixedPointBoundedL2VecSum`] type parameter. Each value of this type is a
     /// fixed point vector with `entries` entries.
     pub fn new(entries: usize) -> Result<Self, FlpError> {
         // (I) Check that the fixed type `F` is compatible.
