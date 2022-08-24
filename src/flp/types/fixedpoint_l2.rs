@@ -77,7 +77,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  *  (4) The computed and submitted norms are treated very similar to the vector
  *      entries, but they have a different number of bits, namely 2n-2.
  *  (5) As the aggregation result is a pointwise sum of the client vectors,
- *      the numbers no longer (semantically) lie in the range [-1,1], and cannot
+ *      the numbers no longer (semantically) lie in the range [-1,1), and cannot
  *      be represented by the same fixed point type as the input. Instead the
  *      decoding happens directly into a vector of floats.
  *
@@ -87,7 +87,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  * representation has. Encoding and decoding is handled by the associated
  * functions of the `CompatibleFloat` trait.
  *
- * Semantically, the following function describes how a fixed-point value `x` is
+ * Semantically, the following function describes how a fixed-point value `x` in range `[-1,1)` is
  * converted to a field integer:
  *   enc : [-1,1) -> [0,2^n)
  *   enc(x) = 2^(n-1) * x + 2^(n-1)
@@ -110,7 +110,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  *      computation. This is done by working with a factor of 2^(2n-2).
  * This means that what is actually computed in this type is the following:
  *   our_norm(xs) = 2^(2n-2) * norm(xs)^2
- * Given a vector ys of numbers in the field integer encoding (in [0,2^n]),
+ * Given a vector ys of numbers in the field integer encoding (in [0,2^n)),
  * this gives the following equation:
  *   our_norm_on_encoded(ys) = our_norm([dec(y) for y in ys])
  *                           = sum_{y in ys} y^2 - (2^n)*y + 2^(2n-2)
@@ -120,7 +120,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  * Let `d` denote the number of the vector entries. The maximal value the result
  * of `our_norm_on_encoded()` can take occurs in the case where all entries are
  * `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
- * field type must be such that this number fits inside.
+ * finite field used for encoding must be at least as large as this.
  *
  * For validating that the norm of the submitted vector lies in the correct
  * range, consider the following:
