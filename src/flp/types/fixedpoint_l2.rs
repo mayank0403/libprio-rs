@@ -120,7 +120,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  * Let `d` denote the number of the vector entries. The maximal value the result
  * of `our_norm_on_encoded()` can take occurs in the case where all entries are
  * `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
- * field type must be such that this number fits inside.
+ * finite field used for encoding must be at least as large as this.
  *
  * For validating that the norm of the submitted vector lies in the correct
  * range, consider the following:
