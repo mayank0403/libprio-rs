@@ -1,7 +1,144 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! A [`Type`](crate::flp::Type) for summing vectors of fixed point numbers whose L2 norm is
-//! bounded by 1.
+//! A [`Type`](crate::flp::Type) for summing vectors of fixed point numbers whose
+//! [L2 norm](https://en.wikipedia.org/wiki/Norm_(mathematics)#Euclidean_norm) is
+//! bounded by `1`.
+//!
+//! In the following a high level overview over the inner workings of this type
+//! is given and implementation details are discussed. It is not necessary for
+//! using the type, but it should be very helpful when trying to understand the
+//! implementation.
+//!
+//! ### Overview
+//! Clients submit a vector of numbers whose values semantically lie in `[-1,1)`,
+//! together with a norm in the range `[0,1)`. The validation circuit checks that
+//! the norm of the vector is equal to the submitted norm, while the encoding
+//! guarantees that the submitted norm lies in the correct range.
+//!
+//! ### Different number encodings
+//! Let n denote the number of bits of the chosen fixed-point type.
+//! Numbers occur in 5 different representations:
+//! 1. Clients have a vector whose entries are fixed point numbers. Only those
+//!    fixed point types are supported where the numbers lie in the range
+//!    `[-1,1)`.
+//! 2. Because norm computation happens in the validation circuit, it is done
+//!    on entries encoded as field elements. That is, the same vector entries
+//!    are now represented by integers in the range `[0,2^n)`, where `-1` is
+//!    represented by `0` and `+1` by `2^n`.
+//! 3. Because the field is not necessarily exactly of size `2^n`, but might be
+//!    larger, it is not enough to encode a vector entry as in 2. and submit
+//!    it to the aggregator. Instead, in order to make sure that all submitted
+//!    values are in the correct range, they are bit-encoded. (This is the same
+//!    as what happens in the `Sum` type.)
+//!    This means that instead of sending a field element in the range `[0,2^n)`,
+//!    we send `n` field elements representing the bit encoding. The validation
+//!    circuit can verify that all submitted "bits" are indeed either `0` or `1`.
+//! 4. The computed and submitted norms are treated very similar to the vector
+//!    entries, but they have a different number of bits, namely `2n-2`.
+//! 5. As the aggregation result is a pointwise sum of the client vectors,
+//!    the numbers no longer (semantically) lie in the range `[-1,1)`, and cannot
+//!    be represented by the same fixed point type as the input. Instead the
+//!    decoding happens directly into a vector of floats.
+//!
+//! ### Fixed point encoding
+//! Submissions consist of encoded fixed-point numbers in `[-1,1)` represented as
+//! field elements in `[0, 2^n)`, where n is the number of bits the fixed-point
+//! representation has. Encoding and decoding is handled by the associated functions of the
+//! [`CompatibleFloat`](crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat)
+//! trait. Semantically, the following function describes how a fixed-point value `x`
+//! in range `[-1,1)` is converted to a field integer:
+//! ```text
+//! enc : [-1,1) -> [0,2^n)
+//! enc(x) = 2^(n-1) * x + 2^(n-1)
+//! ```
+//! The inverse is:
+//! ```text
+//! dec : [0,2^n) -> [-1,1)
+//! dec(y) = (y - 2^(n-1)) * 2^(1-n)
+//! ```
+//! Note that these functions only make sense when interpreting all occuring
+//! numbers as real numbers. Since our signed fixed-point numbers are encoded as
+//! two's complement integers, the computation that happens in
+//! [`CompatibleFloat::to_field_integer`](crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat::to_field_integer)
+//! is actually simpler.
+//!
+//! ### Norm computation
+//! The L2 norm of a vector xs of numbers in `[-1,1)` is given by:
+//! ```text
+//! norm(xs) = sqrt(sum_{x in xs} x^2)
+//! ```
+//! Instead of computing the norm, we make two simplifications:
+//! 1. We ignore the square root, which means that we are actually computing
+//!    the square of the norm.
+//! 2. Since we work with integers, fractional values should not occur in the
+//!    computation. This is done by working with a factor of `2^(2n-2)`.
+//! This means that what is actually computed in this type is the following:
+//! ```text
+//! our_norm(xs) = 2^(2n-2) * norm(xs)^2
+//! ```
+//! Given a vector ys of numbers in the field integer encoding (in `[0,2^n)`),
+//! this gives the following equation:
+//! ```text
+//! our_norm_on_encoded(ys) = our_norm([dec(y) for y in ys])
+//!                         = sum_{y in ys} y^2 - (2^n)*y + 2^(2n-2)
+//! ```
+//! The constant and linear terms in the sum appear because the decoding function
+//! is not linear but only affine.
+//! Let `d` denote the number of the vector entries. The maximal value the result
+//! of `our_norm_on_encoded()` can take occurs in the case where all entries are
+//! `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
+//! finite field used for encoding must be at least as large as this.
+//! For validating that the norm of the submitted vector lies in the correct
+//! range, consider the following:
+//!  - The result of `norm(xs)` should be in `[0,1)`.
+//!  - Thus, the result of `our_norm(xs)` should be in `[0,2^(2n-2))`.
+//!  - The result of `our_norm_on_encoded(ys)` should be in `[0,2^(2n-2))`.
+//! This means that the valid norms are exactly those representable with `2n-2`
+//! bits.
+//!
+//! ### Differences in the computation because of distribution
+//! Computation of the norm in the validation circuit happens distributed, which
+//! means that every aggregator computes the circuit on an additive share of the
+//! client's actual vector entries and norm. This has the slight problem that
+//! the constant part of the computation done in `our_norm_on_encoded()` occurs
+//! `num_shares` times in the final aggregated result. The implementation
+//! of the norm computation, in `compute_norm_of_entries()`, has an additional
+//! parameter `constant_part_multiplier` which is set to `1/num_shares` when the
+//! norm is computed in the validation circuit.
+//! Something similar happens in the decoding of the aggregated result (in
+//! `decode_result()`), where instead of the `dec()` function from above, the
+//! following function is used:
+//! ```text
+//! dec'(x) = d * 2^(1-n) - c
+//! ```
+//! Here, `c` is the number of clients.
+//!
+//! ### Naming in the implementation
+//! The following names are used:
+//!  - `self.bits_per_entry` is `n`
+//!  - `self.entries`        is `d`
+//!  - `self.bits_for_norm`  is `2n-2`
+//!
+//! ### Submission layout
+//! The client submissions contain a share of their vector and the norm
+//! they claim it has.
+//! The submission is a vector of field elements laid out as follows:
+//! ```text
+//! |---- bits_per_entry * entries ----|---- bits_for_norm ----|
+//!  ^                                  ^
+//!  \- the input vector entries        |
+//!                                     \- the encoded norm
+//! ```
+//!
+//! ### Validity
+//! In addition to checking that every submission entry is `0` or `1`, the validation
+//! circuit of this type computes the norm and compares to what the client
+//! claimed.
+//!
+//! ### Value `1`
+//! We actually do not allow the submitted norm or vector entries to be
+//! exactly `1`, but rather require them to be strictly less. Supporting `1` would
+//! entail a more fiddly encoding and is not necessary for our usecase.
 
 pub mod compatible_float;
 
@@ -42,139 +179,6 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
     range_norm_begin: usize,
     range_norm_end: usize,
 }
-
-/* In the following a high level overview over the inner workings of this type
- * is given and implementation details are discussed. It is not necessary for
- * using the type, but it should be very helpful when trying to understand the
- * implementation.
- *
- *
- * --- Overview ---
- * Clients submit a vector of numbers whose values semantically lie in [-1,1),
- * together with a norm in the range [0,1). The validation circuit checks that
- * the norm of the vector is equal to the submitted norm, while the encoding
- * guarantees that the submitted norm lies in the correct range.
- *
- *
- * --- Different number encodings ---
- * Let n denote the number of bits of the chosen fixed-point type.
- * Numbers occur in 5 different representations:
- *  (1) Clients have a vector whose entries are fixed point numbers. Only those
- *      fixed point types are supported where the numbers lie in the range
- *      [-1,1).
- *  (2) Because norm computation happens in the validation circuit, it is done
- *      on entries encoded as field elements. That is, the same vector entries
- *      are now represented by integers in the range [0,2^n), where -1 is
- *      represented by 0 and +1 by 2^n.
- *  (3) Because the field is not necessarily exactly of size 2^n, but might be
- *      larger, it is not enough to encode a vector entry as in (2) and submit
- *      it to the aggregator. Instead, in order to make sure that all submitted
- *      values are in the correct range, they are bit-encoded. (This is the same
- *      as what happens in the `Sum` type.)
- *      This means that instead of sending a field element in the range [0,2^n),
- *      we send n field elements representing the bit encoding. The validation
- *      circuit can verify that all submitted "bits" are indeed either 0 or 1.
- *  (4) The computed and submitted norms are treated very similar to the vector
- *      entries, but they have a different number of bits, namely 2n-2.
- *  (5) As the aggregation result is a pointwise sum of the client vectors,
- *      the numbers no longer (semantically) lie in the range [-1,1), and cannot
- *      be represented by the same fixed point type as the input. Instead the
- *      decoding happens directly into a vector of floats.
- *
- * --- Fixed point encoding ---
- * Submissions consist of encoded fixed-point numbers in [-1,1) represented as
- * field elements in [0, 2^n), where n is the number of bits the fixed-point
- * representation has. Encoding and decoding is handled by the associated
- * functions of the `CompatibleFloat` trait.
- *
- * Semantically, the following function describes how a fixed-point value `x` in range `[-1,1)` is
- * converted to a field integer:
- *   enc : [-1,1) -> [0,2^n)
- *   enc(x) = 2^(n-1) * x + 2^(n-1)
- * The inverse is:
- *   dec : [0,2^n) -> [-1,1)
- *   dec(y) = (y - 2^(n-1)) * 2^(1-n)
- * Note that these functions only make sense when interpreting all occuring
- * numbers as real numbers. Since our signed fixed-point numbers are encoded as
- * two's complement integers, the computation that happens in
- * `CompatibleFloat::to_field_integer` is actually simpler.
- *
- *
- * --- Norm computation ---
- * The L2 norm of a vector xs of numbers in [-1,1) is given by:
- *   norm(xs) = sqrt(sum_{x in xs} x^2)
- * Instead of computing the norm, we make two simplifications:
- *  (1) We ignore the square root, which means that we are actually computing
- *      the square of the norm.
- *  (2) Since we work with integers, fractional values should not occur in the
- *      computation. This is done by working with a factor of 2^(2n-2).
- * This means that what is actually computed in this type is the following:
- *   our_norm(xs) = 2^(2n-2) * norm(xs)^2
- * Given a vector ys of numbers in the field integer encoding (in [0,2^n)),
- * this gives the following equation:
- *   our_norm_on_encoded(ys) = our_norm([dec(y) for y in ys])
- *                           = sum_{y in ys} y^2 - (2^n)*y + 2^(2n-2)
- * The constant and linear terms in the sum appear because the decoding function
- * is not linear but only affine.
- *
- * Let `d` denote the number of the vector entries. The maximal value the result
- * of `our_norm_on_encoded()` can take occurs in the case where all entries are
- * `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
- * finite field used for encoding must be at least as large as this.
- *
- * For validating that the norm of the submitted vector lies in the correct
- * range, consider the following:
- *  - The result of `norm(xs)` should be in [0,1).
- *  - Thus, the result of `our_norm(xs)` should be in [0,2^(2n-2)).
- *  - The result of `our_norm_on_encoded(ys)` should be in [0,2^(2n-2)).
- * This means that the valid norms are exactly those representable with `2n-2`
- * bits.
- *
- *
- * --- Differences in the computation because of distribution ---
- * Computation of the norm in the validation circuit happens distributed, which
- * means that every aggregator computes the circuit on an additive share of the
- * client's actual vector entries and norm. This has the slight problem that
- * the constant part of the computation done in `our_norm_on_encoded()` occurs
- * `num_shares` times in the final aggregated result. The implementation
- * of the norm computation, in `compute_norm_of_entries()`, has an additional
- * parameter `constant_part_multiplier` which is set to 1/num_shares when the
- * norm is computed in the validation circuit.
- * Something similar happens in the decoding of the aggregated result (in
- * `decode_result()`), where instead of the `dec()` function from above, the
- * following function is used:
- *   dec'(x) = d * 2^(1-n) - c
- * Here, `c` is the number of clients.
- *
- *
- * --- Naming in the implementation ---
- * The following names are used:
- *  - `self.bits_per_entry` is n
- *  - `self.entries`        is d
- *  - `self.bits_for_norm`  is 2n-2
- *
- *
- * --- Submission layout ---
- * The client submissions contain a share of their vector and the norm
- * they claim it has.
- * The submission is a vector of field elements laid out as follows:
- * |---- bits_per_entry * entries ----|---- bits_for_norm ----|
- *  ^                                  ^
- *  \- the input vector entries        |
- *                                     \- the encoded norm
- *
- *
- * --- Validity ---
- * In addition to checking that every submission entry is 0 or 1, the validation
- * circuit of this type computes the norm and compares to what the client
- * claimed.
- *
- *
- * --- Value 1 ---
- * We actually do not allow the submitted norm or vector entries to be
- * exactly 1, but rather require them to be strictly less. Supporting 1 would
- * entail a more fiddly encoding and is not necessary for our usecase.
- */
 
 impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
     /// Return a new [`FixedPointL2BoundedVecSum`] type parameter. Each value of this type is a
