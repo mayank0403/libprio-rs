@@ -110,7 +110,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  *      computation. This is done by working with a factor of 2^(2n-2).
  * This means that what is actually computed in this type is the following:
  *   our_norm(xs) = 2^(2n-2) * norm(xs)^2
- * Given a vector ys of numbers in the field integer encoding (in [0,2^n]),
+ * Given a vector ys of numbers in the field integer encoding (in [0,2^n)),
  * this gives the following equation:
  *   our_norm_on_encoded(ys) = our_norm([dec(y) for y in ys])
  *                           = sum_{y in ys} y^2 - (2^n)*y + 2^(2n-2)
