@@ -87,7 +87,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  * representation has. Encoding and decoding is handled by the associated
  * functions of the `CompatibleFloat` trait.
  *
- * Semantically, the following function describes how a fixed-point value `x` is
+ * Semantically, the following function describes how a fixed-point value `x` in range `[-1,1)` is
  * converted to a field integer:
  *   enc : [-1,1) -> [0,2^n)
  *   enc(x) = 2^(n-1) * x + 2^(n-1)
