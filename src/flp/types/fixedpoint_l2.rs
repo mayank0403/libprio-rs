@@ -126,7 +126,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
  * range, consider the following:
  *  - The result of `norm(xs)` should be in [0,1).
  *  - Thus, the result of `our_norm(xs)` should be in [0,2^(2n-2)).
- *  - The result of `our_norm_on_encoded(ys)` should be in the same range.
+ *  - The result of `our_norm_on_encoded(ys)` should be in [0,2^(2n-2)).
  * This means that the valid norms are exactly those representable with `2n-2`
  * bits.
  *
@@ -269,7 +269,7 @@ where
         let mut encoded: Vec<F> =
             vec![F::zero(); self.bits_per_entry * self.entries + self.bits_for_norm];
         for (l, entry) in integer_entries.iter().enumerate() {
-            F::encode_into_bitvector_representation_slice(
+            F::fill_with_bitvector_representation(
                 entry,
                 &mut encoded[l * self.bits_per_entry..(l + 1) * self.bits_per_entry],
             )?;
@@ -285,7 +285,7 @@ where
         let norm_int = <F as FieldElement>::Integer::from(norm);
 
         // Write the norm into the `entries` vector.
-        F::encode_into_bitvector_representation_slice(
+        F::fill_with_bitvector_representation(
             &norm_int,
             &mut encoded[self.range_norm_begin..self.range_norm_end],
         )?;
@@ -534,6 +534,7 @@ mod tests {
                     TestField::from(36864),
                     TestField::from(34816),
                 ]),
+                num_shares: 3,
             },
         )
         .unwrap();
@@ -551,6 +552,7 @@ mod tests {
                     TestField::from(36864),
                     TestField::from(34816),
                 ]),
+                num_shares: 3,
             },
         )
         .unwrap();
@@ -566,6 +568,7 @@ mod tests {
                     TestField::from(65535),
                     TestField::from(65535),
                 ]),
+                num_shares: 3,
             },
         )
         .unwrap();
