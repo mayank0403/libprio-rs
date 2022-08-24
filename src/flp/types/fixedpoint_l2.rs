@@ -168,7 +168,7 @@ use std::{convert::TryInto, fmt::Debug, marker::PhantomData};
 ///
 /// [*fixed* crate]: https://crates.io/crates/fixed
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
+pub struct FixedPointBoundedL2VecSum<T: Fixed, F: FieldElement> {
     bits_per_entry: usize,
     entries: usize,
     bits_for_norm: usize,
@@ -180,7 +180,7 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
     range_norm_end: usize,
 }
 
-impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
+impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
     /// Return a new [`FixedPointL2BoundedVecSum`] type parameter. Each value of this type is a
     /// fixed point vector with `entries` entries.
     pub fn new(entries: usize) -> Result<Self, FlpError> {
@@ -250,7 +250,7 @@ impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
     }
 }
 
-impl<T: Fixed, F: FieldElement> Type for FixedPointL2BoundedVecSum<T, F>
+impl<T: Fixed, F: FieldElement> Type for FixedPointBoundedL2VecSum<T, F>
 where
     T: CompatibleFloat<F>,
 {
@@ -503,8 +503,8 @@ mod tests {
 
     #[test]
     fn test_bounded_fpvec_sum() {
-        let vsum: FixedPointL2BoundedVecSum<FixedI16<U15>, TestField> =
-            FixedPointL2BoundedVecSum::new(3).unwrap();
+        let vsum: FixedPointBoundedL2VecSum<FixedI16<U15>, TestField> =
+            FixedPointBoundedL2VecSum::new(3).unwrap();
         let one = TestField::one();
 
         let fp_4_inv = fixed!(0.25: I1F15);
@@ -629,10 +629,10 @@ mod tests {
 
         // invalid initialization
         // fixed point too large
-        <FixedPointL2BoundedVecSum<FixedI128<U127>, TestField>>::new(3).unwrap_err();
+        <FixedPointBoundedL2VecSum<FixedI128<U127>, TestField>>::new(3).unwrap_err();
         // vector too large
-        <FixedPointL2BoundedVecSum<FixedI16<U15>, TestField>>::new(30000000000).unwrap_err();
+        <FixedPointBoundedL2VecSum<FixedI16<U15>, TestField>>::new(30000000000).unwrap_err();
         // fixed point type has more than one int bit
-        <FixedPointL2BoundedVecSum<FixedI16<U14>, TestField>>::new(3).unwrap_err();
+        <FixedPointBoundedL2VecSum<FixedI16<U14>, TestField>>::new(3).unwrap_err();
     }
 }
