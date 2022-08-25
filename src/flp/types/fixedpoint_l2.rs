@@ -42,7 +42,7 @@
 //!
 //! ### Fixed point encoding
 //! Submissions consist of encoded fixed-point numbers in `[-1,1)` represented as
-//! field elements in `[0, 2^n)`, where n is the number of bits the fixed-point
+//! field elements in `[0,2^n)`, where n is the number of bits the fixed-point
 //! representation has. Encoding and decoding is handled by the associated functions of the
 //! [`CompatibleFloat`](crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat)
 //! trait. Semantically, the following function describes how a fixed-point value `x`
