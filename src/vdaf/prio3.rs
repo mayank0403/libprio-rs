@@ -37,7 +37,6 @@ use crate::field::{Field128, Field64};
 use crate::flp::gadgets::ParallelSumMultithreaded;
 #[cfg(feature = "crypto-dependencies")]
 use crate::flp::gadgets::{BlindPolyEval, ParallelSum};
-#[cfg(feature = "fixed")]
 use crate::flp::types::fixedpoint_l2::FixedPointL2BoundedVecSum;
 #[cfg(feature = "crypto-dependencies")]
 use crate::flp::types::{Average, Count, CountVec, Histogram, Sum};
@@ -48,9 +47,7 @@ use crate::vdaf::{
     Aggregatable, AggregateShare, Aggregator, Client, Collector, OutputShare, PrepareTransition,
     Share, ShareDecodingParameter, Vdaf, VdafError,
 };
-#[cfg(feature = "fixed")]
 use fixed::types::extra::*;
-#[cfg(feature = "fixed")]
 use fixed::*;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -139,13 +136,11 @@ impl Prio3Aes128Sum {
 /// The fixed point vector sum type. Each measurement is a vector of 16-bit fixed point decimals
 /// with 15 fractional digits and the aggregate is the sum. The verification function ensures the
 /// L2 norm of the vector is <= 1.
-#[cfg(feature = "fixed")]
-#[cfg_attr(docsrs, doc(cfg(feature = "fixed")))]
+#[cfg(feature = "crypto-dependencies")]
 pub type Prio3Aes128FixedPointL2BoundedVecSum =
     Prio3<FixedPointL2BoundedVecSum<FixedI16<U15>, Field64>, PrgAes128, 16>;
 
-#[cfg(feature = "fixed")]
-#[cfg_attr(docsrs, doc(cfg(feature = "fixed")))]
+#[cfg(feature = "crypto-dependencies")]
 impl Prio3Aes128FixedPointL2BoundedVecSum {
     /// Construct an instance of this VDAF with the given number of aggregators and number of
     /// vector entries.
@@ -978,7 +973,6 @@ mod tests {
     use super::*;
     use crate::vdaf::{run_vdaf, run_vdaf_prepare};
     use assert_matches::assert_matches;
-    #[cfg(feature = "fixed")]
     use fixed_macro::fixed;
     use rand::prelude::*;
 
@@ -1047,7 +1041,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "fixed")]
     fn test_prio3_bounded_fpvec_sum() {
         // two aggregators, three entries per vector.
         let prio3 =

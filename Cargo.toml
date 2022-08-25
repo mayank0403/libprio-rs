@@ -15,6 +15,8 @@ ctr = { version = "0.9.1", optional = true }
 cmac = { version = "0.7.1", optional = true }
 base64 = "0.13.0"
 byteorder = "1.4.3"
+fixed = "1.15"
+fixed-macro = "1.1.1"
 getrandom = { version = "0.2.7", features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
 static_assertions = "1.1.0"
@@ -30,10 +32,6 @@ rayon = { version = "1.5.3", optional = true }
 # dependencies required if feature "prio2" is enabled
 aes-gcm = { version = "^0.9", optional = true }
 ring = { version = "0.16.20", optional = true }
-
-# dependencies required if feature "fixed" is enabled
-fixed = { version = "1.15", optional = true }
-fixed-macro = { version = "1.1.1", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
@@ -53,7 +51,6 @@ test-util = ["rand", "serde_json"]
 multithreaded = ["rayon"]
 prio2 = ["aes-gcm", "ring"]
 crypto-dependencies = ["aes", "ctr", "cmac"]
-fixed = ["dep:fixed", "fixed-macro"]
 
 [workspace]
 members = [".", "binaries"]

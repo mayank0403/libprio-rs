@@ -9,8 +9,6 @@ use crate::polynomial::poly_range_check;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
-#[cfg(feature = "fixed")]
-#[cfg_attr(docsrs, doc(cfg(feature = "fixed")))]
 pub mod fixedpoint_l2;
 
 /// The counter data type. Each measurement is `0` or `1` and the aggregate result is the sum of
