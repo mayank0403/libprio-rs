@@ -359,7 +359,7 @@ where
         // norm is always a valid norm (semantically in the range [0,1]). By
         // comparing submitted with actual, we make sure the actual norm is
         // valid.
-
+        //
         // Computing the norm is done using `compute_norm_of_entries()`. This
         // needs some setup, in particular there is:
         //  - `decoded_entries` is an iterator over `self.entries` many field
