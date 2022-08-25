@@ -26,7 +26,7 @@
 //!    are now represented by integers in the range `[0,2^n)`, where `-1` is
 //!    represented by `0` and `+1` by `2^n`.
 //! 3. Because the field is not necessarily exactly of size `2^n`, but might be
-//!    larger, it is not enough to encode a vector entry as in 2. and submit
+//!    larger, it is not enough to encode a vector entry as in (2.) and submit
 //!    it to the aggregator. Instead, in order to make sure that all submitted
 //!    values are in the correct range, they are bit-encoded. (This is the same
 //!    as what happens in the `Sum` type.)
