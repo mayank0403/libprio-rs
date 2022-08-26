@@ -47,8 +47,8 @@ use crate::vdaf::{
     Aggregatable, AggregateShare, Aggregator, Client, Collector, OutputShare, PrepareTransition,
     Share, ShareDecodingParameter, Vdaf, VdafError,
 };
-use fixed::types::extra::*;
-use fixed::*;
+use fixed::types::extra::U15;
+use fixed::FixedI16;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::io::Cursor;
