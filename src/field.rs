@@ -218,7 +218,7 @@ pub(crate) trait FieldElementExt: FieldElement {
         let mut i = *input;
 
         let one = Self::Integer::from(Self::one());
-        for (_, bit) in output.iter_mut() {
+        for bit in output.iter_mut() {
             let w = Self::from(i & one);
             *bit = w;
             i = i >> one;
