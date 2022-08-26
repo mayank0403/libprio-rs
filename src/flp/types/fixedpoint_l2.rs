@@ -396,7 +396,7 @@ where
 
         let norm_check = computed_norm - submitted_norm;
 
-        // Finally, we require both checks to be successfull by computing a
+        // Finally, we require both checks to be successful by computing a
         // random linear combination of them.
         let out = joint_rand[1] * range_check + (joint_rand[1] * joint_rand[1]) * norm_check;
         Ok(out)
