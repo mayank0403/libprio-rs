@@ -16,7 +16,7 @@
 //! guarantees that the submitted norm lies in the correct range.
 //!
 //! ### Different number encodings
-//! Let n denote the number of bits of the chosen fixed-point type.
+//! Let `n` denote the number of bits of the chosen fixed-point type.
 //! Numbers occur in 5 different representations:
 //! 1. Clients have a vector whose entries are fixed point numbers. Only those
 //!    fixed point types are supported where the numbers lie in the range
