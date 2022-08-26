@@ -84,6 +84,7 @@
 //! ```
 //! The constant and linear terms in the sum appear because the decoding function
 //! is not linear but only affine.
+
 //! Let `d` denote the number of the vector entries. The maximal value the result
 //! of `our_norm_on_encoded()` can take occurs in the case where all entries are
 //! `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
