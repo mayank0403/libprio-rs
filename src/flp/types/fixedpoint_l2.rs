@@ -16,7 +16,7 @@
 //! guarantees that the submitted norm lies in the correct range.
 //!
 //! ### Different number encodings
-//! Let n denote the number of bits of the chosen fixed-point type.
+//! Let `n` denote the number of bits of the chosen fixed-point type.
 //! Numbers occur in 5 different representations:
 //! 1. Clients have a vector whose entries are fixed point numbers. Only those
 //!    fixed point types are supported where the numbers lie in the range
@@ -241,6 +241,7 @@ impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
             entries,
             bits_for_norm,
             range_01_checker: poly_range_check(0, 2),
+            // polynomial: 0 + 0 * x + 1 * x^2
             square_computer: vec![F::zero(), F::zero(), F::one()],
             phantom: PhantomData,
 
@@ -313,7 +314,7 @@ where
     }
 
     fn gadget(&self) -> Vec<Box<dyn Gadget<F>>> {
-        // This gadgets checks that a field element is zero or one.
+        // This gadget checks that a field element is zero or one.
         // It is called for all the "bits" of the encoded entries
         // and of the encoded norm.
         let gadget0 = PolyEval::new(
