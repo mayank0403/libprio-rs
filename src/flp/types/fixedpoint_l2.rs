@@ -84,6 +84,7 @@
 //! ```
 //! The constant and linear terms in the sum appear because the decoding function
 //! is not linear but only affine.
+
 //! Let `d` denote the number of the vector entries. The maximal value the result
 //! of `our_norm_on_encoded()` can take occurs in the case where all entries are
 //! `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
@@ -250,9 +251,10 @@ impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
     }
 }
 
-impl<T: Fixed, F: FieldElement> Type for FixedPointBoundedL2VecSum<T, F>
+impl<T, F> Type for FixedPointBoundedL2VecSum<T, F>
 where
-    T: CompatibleFloat<F>,
+    T: Fixed + CompatibleFloat<F>,
+    F: FieldElement,
 {
     type Measurement = Vec<T>;
     type AggregateResult = Vec<<T as CompatibleFloat<F>>::Float>;
@@ -396,7 +398,7 @@ where
 
         let norm_check = computed_norm - submitted_norm;
 
-        // Finally, we require both checks to be successfull by computing a
+        // Finally, we require both checks to be successful by computing a
         // random linear combination of them.
         let out = joint_rand[1] * range_check + (joint_rand[1] * joint_rand[1]) * norm_check;
         Ok(out)
@@ -527,6 +529,7 @@ mod tests {
 
         // encoded norm does not match computed norm
         let mut input: Vec<TestField> = vsum.encode_measurement(&fp_vec1).unwrap();
+        assert_eq!(input[0], TestField::zero());
         input[0] = one; // it was zero
         flp_validity_test(
             &vsum,
