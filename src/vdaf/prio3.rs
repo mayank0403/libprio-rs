@@ -37,7 +37,7 @@ use crate::field::{Field128, Field64};
 use crate::flp::gadgets::ParallelSumMultithreaded;
 #[cfg(feature = "crypto-dependencies")]
 use crate::flp::gadgets::{BlindPolyEval, ParallelSum};
-use crate::flp::types::fixedpoint_l2::FixedPointL2BoundedVecSum;
+use crate::flp::types::fixedpoint_l2::FixedPointBoundedL2VecSum;
 #[cfg(feature = "crypto-dependencies")]
 use crate::flp::types::{Average, Count, CountVec, Histogram, Sum};
 use crate::flp::Type;
@@ -137,11 +137,11 @@ impl Prio3Aes128Sum {
 /// with 15 fractional digits and the aggregate is the sum. The verification function ensures the
 /// L2 norm of the vector is <= 1.
 #[cfg(feature = "crypto-dependencies")]
-pub type Prio3Aes128FixedPointL2BoundedVecSum =
-    Prio3<FixedPointL2BoundedVecSum<FixedI16<U15>, Field64>, PrgAes128, 16>;
+pub type Prio3Aes128FixedPoint16BoundedL2VecSum =
+    Prio3<FixedPointBoundedL2VecSum<FixedI16<U15>, Field64>, PrgAes128, 16>;
 
 #[cfg(feature = "crypto-dependencies")]
-impl Prio3Aes128FixedPointL2BoundedVecSum {
+impl Prio3Aes128FixedPoint16BoundedL2VecSum {
     /// Construct an instance of this VDAF with the given number of aggregators and number of
     /// vector entries.
     pub fn new_aes128_fixed_l2bounded_vec_sum(
@@ -152,7 +152,7 @@ impl Prio3Aes128FixedPointL2BoundedVecSum {
 
         Ok(Prio3 {
             num_aggregators,
-            typ: FixedPointL2BoundedVecSum::new(entries)?,
+            typ: FixedPointBoundedL2VecSum::new(entries)?,
             phantom: PhantomData,
         })
     }
@@ -1044,7 +1044,8 @@ mod tests {
     fn test_prio3_bounded_fpvec_sum() {
         // two aggregators, three entries per vector.
         let prio3 =
-            Prio3Aes128FixedPointL2BoundedVecSum::new_aes128_fixed_l2bounded_vec_sum(2, 3).unwrap();
+            Prio3Aes128FixedPoint16BoundedL2VecSum::new_aes128_fixed_l2bounded_vec_sum(2, 3)
+                .unwrap();
 
         let fp_4_inv = fixed!(0.25: I1F15);
         let fp_8_inv = fixed!(0.125: I1F15);

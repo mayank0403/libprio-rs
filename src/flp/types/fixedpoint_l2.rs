@@ -26,7 +26,7 @@
 //!    are now represented by integers in the range `[0,2^n)`, where `-1` is
 //!    represented by `0` and `+1` by `2^n`.
 //! 3. Because the field is not necessarily exactly of size `2^n`, but might be
-//!    larger, it is not enough to encode a vector entry as in 2. and submit
+//!    larger, it is not enough to encode a vector entry as in (2.) and submit
 //!    it to the aggregator. Instead, in order to make sure that all submitted
 //!    values are in the correct range, they are bit-encoded. (This is the same
 //!    as what happens in the `Sum` type.)
@@ -42,7 +42,7 @@
 //!
 //! ### Fixed point encoding
 //! Submissions consist of encoded fixed-point numbers in `[-1,1)` represented as
-//! field elements in `[0, 2^n)`, where n is the number of bits the fixed-point
+//! field elements in `[0,2^n)`, where n is the number of bits the fixed-point
 //! representation has. Encoding and decoding is handled by the associated functions of the
 //! [`CompatibleFloat`](crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat)
 //! trait. Semantically, the following function describes how a fixed-point value `x`
@@ -168,7 +168,7 @@ use std::{convert::TryInto, fmt::Debug, marker::PhantomData};
 ///
 /// [*fixed* crate]: https://crates.io/crates/fixed
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
+pub struct FixedPointBoundedL2VecSum<T: Fixed, F: FieldElement> {
     bits_per_entry: usize,
     entries: usize,
     bits_for_norm: usize,
@@ -180,8 +180,8 @@ pub struct FixedPointL2BoundedVecSum<T: Fixed, F: FieldElement> {
     range_norm_end: usize,
 }
 
-impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
-    /// Return a new [`FixedPointL2BoundedVecSum`] type parameter. Each value of this type is a
+impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
+    /// Return a new [`FixedPointBoundedL2VecSum`] type parameter. Each value of this type is a
     /// fixed point vector with `entries` entries.
     pub fn new(entries: usize) -> Result<Self, FlpError> {
         // (I) Check that the fixed type `F` is compatible.
@@ -250,7 +250,7 @@ impl<T: Fixed, F: FieldElement> FixedPointL2BoundedVecSum<T, F> {
     }
 }
 
-impl<T: Fixed, F: FieldElement> Type for FixedPointL2BoundedVecSum<T, F>
+impl<T: Fixed, F: FieldElement> Type for FixedPointBoundedL2VecSum<T, F>
 where
     T: CompatibleFloat<F>,
 {
@@ -359,7 +359,7 @@ where
         // norm is always a valid norm (semantically in the range [0,1]). By
         // comparing submitted with actual, we make sure the actual norm is
         // valid.
-
+        //
         // Computing the norm is done using `compute_norm_of_entries()`. This
         // needs some setup, in particular there is:
         //  - `decoded_entries` is an iterator over `self.entries` many field
@@ -503,8 +503,8 @@ mod tests {
 
     #[test]
     fn test_bounded_fpvec_sum() {
-        let vsum: FixedPointL2BoundedVecSum<FixedI16<U15>, TestField> =
-            FixedPointL2BoundedVecSum::new(3).unwrap();
+        let vsum: FixedPointBoundedL2VecSum<FixedI16<U15>, TestField> =
+            FixedPointBoundedL2VecSum::new(3).unwrap();
         let one = TestField::one();
 
         let fp_4_inv = fixed!(0.25: I1F15);
@@ -629,10 +629,10 @@ mod tests {
 
         // invalid initialization
         // fixed point too large
-        <FixedPointL2BoundedVecSum<FixedI128<U127>, TestField>>::new(3).unwrap_err();
+        <FixedPointBoundedL2VecSum<FixedI128<U127>, TestField>>::new(3).unwrap_err();
         // vector too large
-        <FixedPointL2BoundedVecSum<FixedI16<U15>, TestField>>::new(30000000000).unwrap_err();
+        <FixedPointBoundedL2VecSum<FixedI16<U15>, TestField>>::new(30000000000).unwrap_err();
         // fixed point type has more than one int bit
-        <FixedPointL2BoundedVecSum<FixedI16<U14>, TestField>>::new(3).unwrap_err();
+        <FixedPointBoundedL2VecSum<FixedI16<U14>, TestField>>::new(3).unwrap_err();
     }
 }
