@@ -976,4 +976,27 @@ mod tests {
     fn test_field128() {
         field_element_test::<Field128>();
     }
+
+    #[test]
+    fn test_encode_into_bitvector() {
+        let zero = Field128::zero();
+        let one = Field128::one();
+        let zero_enc = Field128::encode_into_bitvector_representation(&0, 4).unwrap();
+        let one_enc = Field128::encode_into_bitvector_representation(&1, 4).unwrap();
+        let fifteen_enc = Field128::encode_into_bitvector_representation(&15, 4).unwrap();
+        assert_eq!(zero_enc, [zero; 4]);
+        assert_eq!(one_enc, [one, zero, zero, zero]);
+        assert_eq!(fifteen_enc, [one; 4]);
+        Field128::encode_into_bitvector_representation(&16, 4).unwrap_err();
+    }
+
+    #[test]
+    fn test_fill_bitvector() {
+        let zero = Field128::zero();
+        let one = Field128::one();
+        let mut output: Vec<Field128> = vec![zero; 6];
+        Field128::fill_with_bitvector_representation(&9, &mut output[1..5]).unwrap();
+        assert_eq!(output, [zero, one, zero, zero, one, zero]);
+        Field128::fill_with_bitvector_representation(&16, &mut output[1..5]).unwrap_err();
+    }
 }
