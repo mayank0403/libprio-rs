@@ -251,9 +251,10 @@ impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
     }
 }
 
-impl<T: Fixed, F: FieldElement> Type for FixedPointBoundedL2VecSum<T, F>
+impl<T, F> Type for FixedPointBoundedL2VecSum<T, F>
 where
-    T: CompatibleFloat<F>,
+    T: Fixed + CompatibleFloat<F>,
+    F: FieldElement,
 {
     type Measurement = Vec<T>;
     type AggregateResult = Vec<<T as CompatibleFloat<F>>::Float>;
