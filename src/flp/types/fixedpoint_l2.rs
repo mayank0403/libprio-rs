@@ -528,6 +528,7 @@ mod tests {
 
         // encoded norm does not match computed norm
         let mut input: Vec<TestField> = vsum.encode_measurement(&fp_vec1).unwrap();
+        assert_eq!(input[0], TestField::zero());
         input[0] = one; // it was zero
         flp_validity_test(
             &vsum,
