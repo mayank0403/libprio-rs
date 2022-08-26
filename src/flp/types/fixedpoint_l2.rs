@@ -316,7 +316,7 @@ where
     }
 
     fn gadget(&self) -> Vec<Box<dyn Gadget<F>>> {
-        // This gadgets checks that a field element is zero or one.
+        // This gadget checks that a field element is zero or one.
         // It is called for all the "bits" of the encoded entries
         // and of the encoded norm.
         let gadget0 = PolyEval::new(
