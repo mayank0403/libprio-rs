@@ -241,6 +241,7 @@ impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
             entries,
             bits_for_norm,
             range_01_checker: poly_range_check(0, 2),
+            // polynomial: 0 + 0 * x + 1 * x^2
             square_computer: vec![F::zero(), F::zero(), F::one()],
             phantom: PhantomData,
 
