@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //! Implementations of encoding fixed point types as field elements and field elements as floats
-//! for the [`FixedPointL2BoundedVecSum`](crate::flp::types::fixedpoint_l2::FixedPointBoundedL2VecSum)
-//! type.
+//! for the [`FixedPointL2BoundedVecSum`] type.
 
 use crate::field::{Field64, FieldElement};
 use fixed::FixedI16;
@@ -12,15 +11,18 @@ use std::fmt::Debug;
 /// given field, and how to represent a field element as the assigned `Float` type.
 pub trait CompatibleFloat<F: FieldElement> {
     /// The float type F can be converted into.
-    type Float: Debug + Clone;
+    type Float: Debug + Copy;
+
     /// Represent a field element as `Float`, given the number of clients `c`.
     fn to_float(t: F, c: usize) -> Self::Float;
+
     /// Represent a value of this type as an integer in the given field.
-    fn to_field_integer(t: Self) -> <F as FieldElement>::Integer;
+    fn to_field_integer(&self) -> <F as FieldElement>::Integer;
 }
 
 impl<U> CompatibleFloat<Field64> for FixedI16<U> {
     type Float = f64;
+
     fn to_float(d: Field64, c: usize) -> f64 {
         // get integer representation of field element
         let i: u64 = <Field64 as FieldElement>::Integer::from(d);
@@ -32,9 +34,10 @@ impl<U> CompatibleFloat<Field64> for FixedI16<U> {
         // clients, we compute f * 2^(1-n) - c
         f * f64::powi(2.0, -15) - (c as f64)
     }
-    fn to_field_integer(fp: FixedI16<U>) -> <Field64 as FieldElement>::Integer {
+
+    fn to_field_integer(&self) -> <Field64 as FieldElement>::Integer {
         //signed two's complement integer representation
-        let i: i16 = fp.to_bits();
+        let i: i16 = self.to_bits();
         // reinterpret as unsigned
         let u = i as u16;
         // invert the left-most bit to de-two-complement

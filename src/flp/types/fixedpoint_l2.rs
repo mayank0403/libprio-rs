@@ -264,10 +264,7 @@ where
         // Convert the fixed-point encoded input values to field integers. We do
         // this once here because we need them for encoding but also for
         // computing the norm.
-        let integer_entries: Vec<_> = fp_entries
-            .iter()
-            .map(|x| <T as CompatibleFloat<F>>::to_field_integer(*x))
-            .collect();
+        let integer_entries: Vec<_> = fp_entries.iter().map(|x| x.to_field_integer()).collect();
 
         // (I) Vector entries.
         // Encode the integer entries bitwise, and write them into the `encoded`

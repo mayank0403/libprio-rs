@@ -150,11 +150,7 @@ impl Prio3Aes128FixedPoint16BoundedL2VecSum {
     ) -> Result<Self, VdafError> {
         check_num_aggregators(num_aggregators)?;
 
-        Ok(Prio3 {
-            num_aggregators,
-            typ: FixedPointBoundedL2VecSum::new(entries)?,
-            phantom: PhantomData,
-        })
+        Prio3::new(num_aggregators, FixedPointBoundedL2VecSum::new(entries)?)
     }
 }
 
