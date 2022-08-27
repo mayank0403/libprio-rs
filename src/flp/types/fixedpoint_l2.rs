@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! A [`Type`](crate::flp::Type) for summing vectors of fixed point numbers whose
+//! A [`Type`] for summing vectors of fixed point numbers whose
 //! [L2 norm](https://en.wikipedia.org/wiki/Norm_(mathematics)#Euclidean_norm) is
 //! bounded by `1`.
 //!
@@ -10,12 +10,14 @@
 //! implementation.
 //!
 //! ### Overview
+//! 
 //! Clients submit a vector of numbers whose values semantically lie in `[-1,1)`,
 //! together with a norm in the range `[0,1)`. The validation circuit checks that
 //! the norm of the vector is equal to the submitted norm, while the encoding
 //! guarantees that the submitted norm lies in the correct range.
 //!
 //! ### Different number encodings
+//! 
 //! Let `n` denote the number of bits of the chosen fixed-point type.
 //! Numbers occur in 5 different representations:
 //! 1. Clients have a vector whose entries are fixed point numbers. Only those
@@ -29,7 +31,7 @@
 //!    larger, it is not enough to encode a vector entry as in (2.) and submit
 //!    it to the aggregator. Instead, in order to make sure that all submitted
 //!    values are in the correct range, they are bit-encoded. (This is the same
-//!    as what happens in the `Sum` type.)
+//!    as what happens in the [`Sum`](crate::flp::types::Sum) type.)
 //!    This means that instead of sending a field element in the range `[0,2^n)`,
 //!    we send `n` field elements representing the bit encoding. The validation
 //!    circuit can verify that all submitted "bits" are indeed either `0` or `1`.
@@ -41,12 +43,12 @@
 //!    decoding happens directly into a vector of floats.
 //!
 //! ### Fixed point encoding
+//! 
 //! Submissions consist of encoded fixed-point numbers in `[-1,1)` represented as
 //! field elements in `[0,2^n)`, where n is the number of bits the fixed-point
-//! representation has. Encoding and decoding is handled by the associated functions of the
-//! [`CompatibleFloat`](crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat)
-//! trait. Semantically, the following function describes how a fixed-point value `x`
-//! in range `[-1,1)` is converted to a field integer:
+//! representation has. Encoding and decoding is handled by the associated functions
+//! of the [`CompatibleFloat`] trait. Semantically, the following function describes
+//! how a fixed-point value `x` in range `[-1,1)` is converted to a field integer:
 //! ```text
 //! enc : [-1,1) -> [0,2^n)
 //! enc(x) = 2^(n-1) * x + 2^(n-1)
@@ -59,10 +61,10 @@
 //! Note that these functions only make sense when interpreting all occuring
 //! numbers as real numbers. Since our signed fixed-point numbers are encoded as
 //! two's complement integers, the computation that happens in
-//! [`CompatibleFloat::to_field_integer`](crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat::to_field_integer)
-//! is actually simpler.
+//! [`CompatibleFloat::to_field_integer`] is actually simpler.
 //!
 //! ### Norm computation
+//! 
 //! The L2 norm of a vector xs of numbers in `[-1,1)` is given by:
 //! ```text
 //! norm(xs) = sqrt(sum_{x in xs} x^2)
@@ -70,8 +72,8 @@
 //! Instead of computing the norm, we make two simplifications:
 //! 1. We ignore the square root, which means that we are actually computing
 //!    the square of the norm.
-//! 2. Since we work with integers, fractional values should not occur in the
-//!    computation. This is done by working with a factor of `2^(2n-2)`.
+//! 2. We want our norm computation result to be integral and in the range `[0, 2^(2n-2))`,
+//!    so we can represent it in our field integers. We achieve this by multiplying with `2^(2n-2)`.
 //! This means that what is actually computed in this type is the following:
 //! ```text
 //! our_norm(xs) = 2^(2n-2) * norm(xs)^2
@@ -80,11 +82,13 @@
 //! this gives the following equation:
 //! ```text
 //! our_norm_on_encoded(ys) = our_norm([dec(y) for y in ys])
+//!                         = 2^(2n-2) * sum_{y in ys} ((y - 2^(n-1)) * 2^(1-n))^2
+//!                         = 2^(2n-2)
+//!                           * sum_{y in ys} y^2 - 2*y*2^(n-1) + (2^(n-1))^2
+//!                           * 2^(1-n)^2
 //!                         = sum_{y in ys} y^2 - (2^n)*y + 2^(2n-2)
 //! ```
-//! The constant and linear terms in the sum appear because the decoding function
-//! is not linear but only affine.
-
+//!
 //! Let `d` denote the number of the vector entries. The maximal value the result
 //! of `our_norm_on_encoded()` can take occurs in the case where all entries are
 //! `2^n-1`, in which case `d * 2^(2n-2)` is an upper bound to the result. The
@@ -98,6 +102,7 @@
 //! bits.
 //!
 //! ### Differences in the computation because of distribution
+//! 
 //! Computation of the norm in the validation circuit happens distributed, which
 //! means that every aggregator computes the circuit on an additive share of the
 //! client's actual vector entries and norm. This has the slight problem that
@@ -115,12 +120,14 @@
 //! Here, `c` is the number of clients.
 //!
 //! ### Naming in the implementation
+//! 
 //! The following names are used:
 //!  - `self.bits_per_entry` is `n`
 //!  - `self.entries`        is `d`
 //!  - `self.bits_for_norm`  is `2n-2`
 //!
 //! ### Submission layout
+//! 
 //! The client submissions contain a share of their vector and the norm
 //! they claim it has.
 //! The submission is a vector of field elements laid out as follows:
@@ -132,11 +139,13 @@
 //! ```
 //!
 //! ### Validity
+//! 
 //! In addition to checking that every submission entry is `0` or `1`, the validation
 //! circuit of this type computes the norm and compares to what the client
 //! claimed.
 //!
 //! ### Value `1`
+//! 
 //! We actually do not allow the submitted norm or vector entries to be
 //! exactly `1`, but rather require them to be strictly less. Supporting `1` would
 //! entail a more fiddly encoding and is not necessary for our usecase.
@@ -158,16 +167,14 @@ use std::{convert::TryInto, fmt::Debug, marker::PhantomData};
 ///
 /// The validity circuit verifies that the L2 norm of each measurement is bounded by 1.
 ///
-/// The [*fixed* crate] is used for fixed point numbers, in particular, exactly the following types
-/// are supported: `FixedI8<U7>`, `FixedI16<U15>`, `FixedI32<U31>`, `FixedI64<U63>` and
-/// `FixedI128<U127>`.
+/// The [*fixed* crate](https://crates.io/crates/fixed) is used for fixed point numbers, in
+/// particular, exactly the following types are supported:
+/// `FixedI8<U7>`, `FixedI16<U15>`, `FixedI32<U31>`, `FixedI64<U63>` and `FixedI128<U127>`.
 ///
 /// Depending on the size of the vector that needs to be transmitted, a corresponding field type has
 /// to be chosen for `F`. For a `n`-bit fixed point type and a `d`-dimensional vector, the field
 /// modulus needs to be larger than `d * 2^(2n-2)` so there are no overflows during norm validity
 /// computation.
-///
-/// [*fixed* crate]: https://crates.io/crates/fixed
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixedPointBoundedL2VecSum<T: Fixed, F: FieldElement> {
     bits_per_entry: usize,

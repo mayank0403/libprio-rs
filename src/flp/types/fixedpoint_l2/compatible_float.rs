@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //! Implementations of encoding fixed point types as field elements and field elements as floats
-//! for the [`FixedPointL2BoundedVecSum`] type.
+//! for the [`FixedPointBoundedL2VecSum`](crate::flp::types::fixedpoint_l2::FixedPointBoundedL2VecSum) type.
 
 use crate::field::{Field64, FieldElement};
 use fixed::FixedI16;
