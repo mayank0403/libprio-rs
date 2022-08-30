@@ -2,6 +2,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
+use fixed_macro::fixed;
 use prio::benchmarked::*;
 #[cfg(feature = "prio2")]
 use prio::client::Client as Prio2Client;
@@ -20,7 +21,6 @@ use prio::flp::{
 use prio::server::{generate_verification_message, ValidationMemory};
 use prio::vdaf::prio3::Prio3;
 use prio::vdaf::{prio3::Prio3InputShare, Client as Prio3Client};
-use fixed_macro::fixed;
 
 /// This benchmark compares the performance of recursive and iterative FFT.
 pub fn fft(c: &mut Criterion) {
@@ -249,7 +249,6 @@ pub fn prio3_client(c: &mut Criterion) {
         });
     }
 
-
     {
         let prio3 = Prio3::new_aes128_fixedpoint16_boundedl2_vec_sum(num_shares, len).unwrap();
         println!("successfully constructed.");
@@ -260,14 +259,15 @@ pub fn prio3_client(c: &mut Criterion) {
             len,
             prio3_input_share_size(&prio3.shard(&measurement).unwrap())
         );
-        c.bench_function(&format!("prio3 fixedpoint16 boundedl2 vec ({} entries)", len), |b| {
-            b.iter(|| {
-                prio3.shard(&measurement).unwrap();
-            })
-        });
+        c.bench_function(
+            &format!("prio3 fixedpoint16 boundedl2 vec ({} entries)", len),
+            |b| {
+                b.iter(|| {
+                    prio3.shard(&measurement).unwrap();
+                })
+            },
+        );
     }
-
-
 
     #[cfg(feature = "multithreaded")]
     {
