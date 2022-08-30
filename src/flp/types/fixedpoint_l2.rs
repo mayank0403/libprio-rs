@@ -10,14 +10,14 @@
 //! implementation.
 //!
 //! ### Overview
-//! 
+//!
 //! Clients submit a vector of numbers whose values semantically lie in `[-1,1)`,
 //! together with a norm in the range `[0,1)`. The validation circuit checks that
 //! the norm of the vector is equal to the submitted norm, while the encoding
 //! guarantees that the submitted norm lies in the correct range.
 //!
 //! ### Different number encodings
-//! 
+//!
 //! Let `n` denote the number of bits of the chosen fixed-point type.
 //! Numbers occur in 5 different representations:
 //! 1. Clients have a vector whose entries are fixed point numbers. Only those
@@ -43,7 +43,7 @@
 //!    decoding happens directly into a vector of floats.
 //!
 //! ### Fixed point encoding
-//! 
+//!
 //! Submissions consist of encoded fixed-point numbers in `[-1,1)` represented as
 //! field elements in `[0,2^n)`, where n is the number of bits the fixed-point
 //! representation has. Encoding and decoding is handled by the associated functions
@@ -64,7 +64,7 @@
 //! [`CompatibleFloat::to_field_integer`] is actually simpler.
 //!
 //! ### Norm computation
-//! 
+//!
 //! The L2 norm of a vector xs of numbers in `[-1,1)` is given by:
 //! ```text
 //! norm(xs) = sqrt(sum_{x in xs} x^2)
@@ -102,7 +102,7 @@
 //! bits.
 //!
 //! ### Differences in the computation because of distribution
-//! 
+//!
 //! Computation of the norm in the validation circuit happens distributed, which
 //! means that every aggregator computes the circuit on an additive share of the
 //! client's actual vector entries and norm. This has the slight problem that
@@ -120,14 +120,14 @@
 //! Here, `c` is the number of clients.
 //!
 //! ### Naming in the implementation
-//! 
+//!
 //! The following names are used:
 //!  - `self.bits_per_entry` is `n`
 //!  - `self.entries`        is `d`
 //!  - `self.bits_for_norm`  is `2n-2`
 //!
 //! ### Submission layout
-//! 
+//!
 //! The client submissions contain a share of their vector and the norm
 //! they claim it has.
 //! The submission is a vector of field elements laid out as follows:
@@ -139,13 +139,13 @@
 //! ```
 //!
 //! ### Validity
-//! 
+//!
 //! In addition to checking that every submission entry is `0` or `1`, the validation
 //! circuit of this type computes the norm and compares to what the client
 //! claimed.
 //!
 //! ### Value `1`
-//! 
+//!
 //! We actually do not allow the submitted norm or vector entries to be
 //! exactly `1`, but rather require them to be strictly less. Supporting `1` would
 //! entail a more fiddly encoding and is not necessary for our usecase.
@@ -520,6 +520,11 @@ mod tests {
 
         let fp_vec1 = vec![fp_4_inv, fp_8_inv, fp_16_inv];
 
+        // the encoded vector has the following entries:
+        // enc(0.25) =  2^(n-1) * 0.25 + 2^(n-1)     = 40960
+        // enc(0.125) =  2^(n-1) * 0.125 + 2^(n-1)   = 36864
+        // enc(0.0625) =  2^(n-1) * 0.0625 + 2^(n-1) = 34816
+
         // Round trip
         assert_eq!(
             vsum.decode_result(
@@ -542,7 +547,7 @@ mod tests {
             &ValidityTestCase::<TestField> {
                 expect_valid: false,
                 expected_output: Some(vec![
-                    TestField::from(40961),
+                    TestField::from(40961), // = enc(0.25) + 2^0
                     TestField::from(36864),
                     TestField::from(34816),
                 ]),
@@ -560,7 +565,7 @@ mod tests {
             &ValidityTestCase::<TestField> {
                 expect_valid: false,
                 expected_output: Some(vec![
-                    TestField::from(40962),
+                    TestField::from(40962), // = enc(0.25) + 2 * 2^0
                     TestField::from(36864),
                     TestField::from(34816),
                 ]),
@@ -572,20 +577,22 @@ mod tests {
         // norm is too big
         flp_validity_test(
             &vsum,
-            &vec![one; 78],
+            &vec![one; 78], // all vector entries and the norm are all-1-vectors
             &ValidityTestCase::<TestField> {
                 expect_valid: false,
                 expected_output: Some(vec![
                     TestField::from(65535),
                     TestField::from(65535),
                     TestField::from(65535),
+                    // = 2^16 - 1, the field element encoded by the all-1 vector
                 ]),
                 num_shares: 3,
             },
         )
         .unwrap();
 
-        // invalid submission length
+        // invalid submission length, should be 78 = 3*16 + (2*16 - 2) for a
+        // 3-element 16-bit vector. 3*16 bits for 3 entries, (2*16-2) for norm.
         let joint_rand = random_vector(vsum.joint_rand_len()).unwrap();
         vsum.valid(&mut vsum.gadget(), &vec![one; 77], &joint_rand, 1)
             .unwrap_err();
@@ -622,6 +629,7 @@ mod tests {
                 })
                 .unwrap();
             let expected_norm = TestField::from(3221028867);
+            // = 3 * ((2^16-1)^2 - (2^16-1)*2^16 + 2^(2*16-2))
             assert_eq!(norm, expected_norm);
 
             // the smallest possible entries (0)
@@ -632,6 +640,7 @@ mod tests {
                 })
                 .unwrap();
             let expected_norm = TestField::from(3221225472);
+            // = 3 * (0^2 - 0*2^16 + 2^(2*16-2))
             assert_eq!(norm, expected_norm);
         }
 
