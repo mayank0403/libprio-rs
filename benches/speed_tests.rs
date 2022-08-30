@@ -20,6 +20,7 @@ use prio::flp::{
 use prio::server::{generate_verification_message, ValidationMemory};
 use prio::vdaf::prio3::Prio3;
 use prio::vdaf::{prio3::Prio3InputShare, Client as Prio3Client};
+use fixed_macro::fixed;
 
 /// This benchmark compares the performance of recursive and iterative FFT.
 pub fn fft(c: &mut Criterion) {
@@ -182,63 +183,91 @@ pub fn count_vec(c: &mut Criterion) {
 /// Benchmark prio3 client performance.
 pub fn prio3_client(c: &mut Criterion) {
     let num_shares = 2;
+    let len = 1000;
 
-    let prio3 = Prio3::new_aes128_count(num_shares).unwrap();
-    let measurement = 1;
-    println!(
-        "prio3 count size = {}",
-        prio3_input_share_size(&prio3.shard(&measurement).unwrap())
-    );
-    c.bench_function("prio3 count", |b| {
-        b.iter(|| {
-            prio3.shard(&1).unwrap();
-        })
-    });
+    {
+        let prio3 = Prio3::new_aes128_count(num_shares).unwrap();
+        let measurement = 1;
+        println!(
+            "prio3 count size = {}",
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
+        );
+        c.bench_function("prio3 count", |b| {
+            b.iter(|| {
+                prio3.shard(&1).unwrap();
+            })
+        });
+    }
 
-    let buckets: Vec<u64> = (1..10).collect();
-    let prio3 = Prio3::new_aes128_histogram(num_shares, &buckets).unwrap();
-    let measurement = 17;
-    println!(
-        "prio3 histogram ({} buckets) size = {}",
-        buckets.len() + 1,
-        prio3_input_share_size(&prio3.shard(&measurement).unwrap())
-    );
-    c.bench_function(
-        &format!("prio3 histogram ({} buckets)", buckets.len() + 1),
-        |b| {
+    {
+        let buckets: Vec<u64> = (1..10).collect();
+        let prio3 = Prio3::new_aes128_histogram(num_shares, &buckets).unwrap();
+        let measurement = 17;
+        println!(
+            "prio3 histogram ({} buckets) size = {}",
+            buckets.len() + 1,
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
+        );
+        c.bench_function(
+            &format!("prio3 histogram ({} buckets)", buckets.len() + 1),
+            |b| {
+                b.iter(|| {
+                    prio3.shard(&measurement).unwrap();
+                })
+            },
+        );
+    }
+
+    {
+        let bits = 32;
+        let prio3 = Prio3::new_aes128_sum(num_shares, bits).unwrap();
+        let measurement = 1337;
+        println!(
+            "prio3 sum ({} bits) size = {}",
+            bits,
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
+        );
+        c.bench_function(&format!("prio3 sum ({} bits)", bits), |b| {
             b.iter(|| {
                 prio3.shard(&measurement).unwrap();
             })
-        },
-    );
+        });
+    }
 
-    let bits = 32;
-    let prio3 = Prio3::new_aes128_sum(num_shares, bits).unwrap();
-    let measurement = 1337;
-    println!(
-        "prio3 sum ({} bits) size = {}",
-        bits,
-        prio3_input_share_size(&prio3.shard(&measurement).unwrap())
-    );
-    c.bench_function(&format!("prio3 sum ({} bits)", bits), |b| {
-        b.iter(|| {
-            prio3.shard(&measurement).unwrap();
-        })
-    });
+    {
+        let prio3 = Prio3::new_aes128_count_vec(num_shares, len).unwrap();
+        let measurement = vec![0; len];
+        println!(
+            "prio3 countvec ({} len) size = {}",
+            len,
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
+        );
+        c.bench_function(&format!("prio3 countvec ({} len)", len), |b| {
+            b.iter(|| {
+                prio3.shard(&measurement).unwrap();
+            })
+        });
+    }
 
-    let len = 1000;
-    let prio3 = Prio3::new_aes128_count_vec(num_shares, len).unwrap();
-    let measurement = vec![0; len];
-    println!(
-        "prio3 countvec ({} len) size = {}",
-        len,
-        prio3_input_share_size(&prio3.shard(&measurement).unwrap())
-    );
-    c.bench_function(&format!("prio3 countvec ({} len)", len), |b| {
-        b.iter(|| {
-            prio3.shard(&measurement).unwrap();
-        })
-    });
+
+    {
+        let prio3 = Prio3::new_aes128_fixedpoint16_boundedl2_vec_sum(num_shares, len).unwrap();
+        println!("successfully constructed.");
+        let fp_num = fixed!(0.0001: I1F15);
+        let measurement = vec![fp_num; len];
+        println!(
+            "prio3 fixedpoint16 boundedl2 vec ({} entries) size = {}",
+            len,
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
+        );
+        c.bench_function(&format!("prio3 fixedpoint16 boundedl2 vec ({} entries)", len), |b| {
+            b.iter(|| {
+                prio3.shard(&measurement).unwrap();
+            })
+        });
+    }
+
+
 
     #[cfg(feature = "multithreaded")]
     {

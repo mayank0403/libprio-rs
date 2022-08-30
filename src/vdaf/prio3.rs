@@ -144,7 +144,7 @@ pub type Prio3Aes128FixedPoint16BoundedL2VecSum =
 impl Prio3Aes128FixedPoint16BoundedL2VecSum {
     /// Construct an instance of this VDAF with the given number of aggregators and number of
     /// vector entries.
-    pub fn new_aes128_fixed_l2bounded_vec_sum(
+    pub fn new_aes128_fixedpoint16_boundedl2_vec_sum(
         num_aggregators: u8,
         entries: usize,
     ) -> Result<Self, VdafError> {
@@ -1040,7 +1040,7 @@ mod tests {
     fn test_prio3_bounded_fpvec_sum() {
         // two aggregators, three entries per vector.
         let prio3 =
-            Prio3Aes128FixedPoint16BoundedL2VecSum::new_aes128_fixed_l2bounded_vec_sum(2, 3)
+            Prio3Aes128FixedPoint16BoundedL2VecSum::new_aes128_fixedpoint16_boundedl2_vec_sum(2, 3)
                 .unwrap();
 
         let fp_4_inv = fixed!(0.25: I1F15);
