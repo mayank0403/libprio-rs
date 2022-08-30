@@ -290,9 +290,7 @@ where
         // Compute the norm of the input vector.
         let field_entries = integer_entries.iter().map(|&x| F::from(x));
         let norm =
-            compute_norm_of_entries(field_entries, self.bits_per_entry, F::one(), &mut |x| {
-                Ok(x * x)
-            })?;
+            compute_norm_of_entries(field_entries, self.bits_per_entry, F::one(), |x| Ok(x * x))?;
         let norm_int = <F as FieldElement>::Integer::from(norm);
 
         // Write the norm into the `entries` vector.
@@ -387,7 +385,7 @@ where
         let num_of_clients = F::valid_integer_try_from(num_shares)?;
         let constant_part_multiplier = F::one() / F::from(num_of_clients);
 
-        let squaring_fun = &mut |x| g[1].call(std::slice::from_ref(&x));
+        let squaring_fun = |x| g[1].call(std::slice::from_ref(&x));
 
         let computed_norm = compute_norm_of_entries(
             decoded_entries?,
@@ -471,7 +469,7 @@ fn compute_norm_of_entries<F, Fs, SquareFun>(
     entries: Fs,
     bits_per_entry: usize,
     constant_part_multiplier: F,
-    sq: &mut SquareFun,
+    mut sq: SquareFun,
 ) -> Result<F, FlpError>
 where
     F: FieldElement,
@@ -607,7 +605,7 @@ mod tests {
                 TestField::from(32768),
             ];
             let norm =
-                compute_norm_of_entries(entries, vsum.bits_per_entry, TestField::one(), &mut |x| {
+                compute_norm_of_entries(entries, vsum.bits_per_entry, TestField::one(), |x| {
                     Ok(x * x)
                 })
                 .unwrap();
@@ -624,7 +622,7 @@ mod tests {
                 TestField::from(65535),
             ];
             let norm =
-                compute_norm_of_entries(entries, vsum.bits_per_entry, TestField::one(), &mut |x| {
+                compute_norm_of_entries(entries, vsum.bits_per_entry, TestField::one(), |x| {
                     Ok(x * x)
                 })
                 .unwrap();
@@ -635,7 +633,7 @@ mod tests {
             // the smallest possible entries (0)
             let entries = vec![TestField::from(0), TestField::from(0), TestField::from(0)];
             let norm =
-                compute_norm_of_entries(entries, vsum.bits_per_entry, TestField::one(), &mut |x| {
+                compute_norm_of_entries(entries, vsum.bits_per_entry, TestField::one(), |x| {
                     Ok(x * x)
                 })
                 .unwrap();
