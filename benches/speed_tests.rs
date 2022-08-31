@@ -186,6 +186,26 @@ pub fn prio3_client(c: &mut Criterion) {
     let len = 1000;
 
     {
+        let prio3 = Prio3::new_aes128_fixedpoint16_boundedl2_vec_sum(num_shares, len).unwrap();
+        println!("successfully constructed.");
+        let fp_num = fixed!(0.0001: I1F15);
+        let measurement = vec![fp_num; len];
+        println!(
+            "prio3 fixedpoint16 boundedl2 vec ({} entries) size = {}",
+            len,
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
+        );
+        c.bench_function(
+            &format!("prio3 fixedpoint16 boundedl2 vec ({} entries)", len),
+            |b| {
+                b.iter(|| {
+                    prio3.shard(&measurement).unwrap();
+                })
+            },
+        );
+    }
+
+    {
         let prio3 = Prio3::new_aes128_count(num_shares).unwrap();
         let measurement = 1;
         println!(
@@ -249,26 +269,6 @@ pub fn prio3_client(c: &mut Criterion) {
         });
     }
 
-    {
-        let prio3 = Prio3::new_aes128_fixedpoint16_boundedl2_vec_sum(num_shares, len).unwrap();
-        println!("successfully constructed.");
-        let fp_num = fixed!(0.0001: I1F15);
-        let measurement = vec![fp_num; len];
-        println!(
-            "prio3 fixedpoint16 boundedl2 vec ({} entries) size = {}",
-            len,
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap())
-        );
-        c.bench_function(
-            &format!("prio3 fixedpoint16 boundedl2 vec ({} entries)", len),
-            |b| {
-                b.iter(|| {
-                    prio3.shard(&measurement).unwrap();
-                })
-            },
-        );
-    }
-
     #[cfg(feature = "multithreaded")]
     {
         let prio3 = Prio3::new_aes128_count_vec_multithreaded(num_shares, len).unwrap();
@@ -298,7 +298,7 @@ fn prio3_input_share_size<F: FieldElement, const L: usize>(
 }
 
 #[cfg(feature = "prio2")]
-criterion_group!(benches, count_vec, prio3_client, poly_mul, prng, fft);
+criterion_group!(benches, prio3_client, count_vec, poly_mul, prng, fft);
 #[cfg(not(feature = "prio2"))]
 criterion_group!(benches, prio3_client, poly_mul, prng, fft);
 

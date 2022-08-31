@@ -153,8 +153,7 @@
 pub mod compatible_float;
 
 use crate::field::{FieldElement, FieldElementExt};
-use crate::flp::gadgets::PolyEval;
-use crate::flp::types::call_gadget_on_vec_entries;
+use crate::flp::gadgets::{BlindPolyEval, ParallelSum, ParallelSumGadget, PolyEval};
 use crate::flp::types::fixedpoint_l2::compatible_float::CompatibleFloat;
 use crate::flp::{FlpError, Gadget, Type};
 use crate::polynomial::poly_range_check;
@@ -186,6 +185,10 @@ pub struct FixedPointBoundedL2VecSum<T: Fixed, F: FieldElement> {
     // range/position constants
     range_norm_begin: usize,
     range_norm_end: usize,
+
+    // XXX
+    gadget0_calls: usize,
+    gadget0_chunk_len: usize,
 }
 
 impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
@@ -243,6 +246,14 @@ impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
         };
         F::valid_integer_try_from(usize_max_norm_value)?;
 
+        // XXX
+        let len = bits_per_entry * entries + bits_for_norm;
+        let gadget0_chunk_len = std::cmp::max(1, (len as f64).sqrt() as usize);
+        let mut gadget0_calls = len / gadget0_chunk_len;
+        if len % gadget0_chunk_len != 0 {
+            gadget0_calls += 1;
+        }
+
         Ok(Self {
             bits_per_entry,
             entries,
@@ -255,6 +266,10 @@ impl<T: Fixed, F: FieldElement> FixedPointBoundedL2VecSum<T, F> {
             // range constants
             range_norm_begin: entries * bits_per_entry,
             range_norm_end: entries * bits_per_entry + bits_for_norm,
+
+            // XXX
+            gadget0_calls,
+            gadget0_chunk_len,
         })
     }
 }
@@ -322,9 +337,9 @@ where
         // This gadget checks that a field element is zero or one.
         // It is called for all the "bits" of the encoded entries
         // and of the encoded norm.
-        let gadget0 = PolyEval::new(
-            self.range_01_checker.clone(),
-            self.bits_per_entry * self.entries + self.bits_for_norm,
+        let gadget0 = ParallelSum::new(
+            BlindPolyEval::new(self.range_01_checker.clone(), self.gadget0_calls),
+            self.gadget0_chunk_len,
         );
 
         // This gadget computes the square of a field element.
@@ -343,6 +358,8 @@ where
         num_shares: usize,
     ) -> Result<F, FlpError> {
         self.valid_call_check(input, joint_rand)?;
+        let num_of_clients = F::valid_integer_try_from(num_shares)?;
+        let constant_part_multiplier = F::one() / F::from(num_of_clients);
 
         // Ensure that all submitted field elements are either 0 or 1.
         // This is done for:
@@ -356,8 +373,26 @@ where
         // entries*bits_per_entry + bits_for_norm.
         //
         // Check that each element is a 0 or 1:
-        let range_check =
-            call_gadget_on_vec_entries(&mut g[0], &input[0..self.range_norm_end], joint_rand[0])?;
+        // XXX
+        let mut r = joint_rand[0];
+        let mut range_check = F::zero();
+        let mut padded_chunk = vec![F::zero(); 2 * self.gadget0_chunk_len];
+        for chunk in input[..self.range_norm_end].chunks(self.gadget0_chunk_len) {
+            let d = chunk.len();
+            for i in 0..self.gadget0_chunk_len {
+                if i < d {
+                    padded_chunk[2 * i] = chunk[i];
+                } else {
+                    // If the chunk is smaller than the chunk length, then copy the last element of
+                    // the chunk into the remaining slots.
+                    padded_chunk[2 * i] = chunk[d - 1];
+                }
+                padded_chunk[2 * i + 1] = r * constant_part_multiplier;
+                r *= joint_rand[0];
+            }
+
+            range_check += g[0].call(&padded_chunk)?;
+        }
 
         // Compute the norm of the entries and ensure that it is the same as the
         // submitted norm. There are exactly enough bits such that a submitted
@@ -381,9 +416,6 @@ where
             .chunks(self.bits_per_entry)
             .map(F::decode_from_bitvector_representation)
             .collect();
-
-        let num_of_clients = F::valid_integer_try_from(num_shares)?;
-        let constant_part_multiplier = F::one() / F::from(num_of_clients);
 
         let squaring_fun = |x| g[1].call(std::slice::from_ref(&x));
 
@@ -430,16 +462,16 @@ where
         // computed via
         // `gadget.arity() + gadget.degree()
         //   * ((1 + gadget.calls()).next_power_of_two() - 1) + 1;`
-        let proof_gadget_0 = 2
-            * ((1 + (self.bits_per_entry * self.entries + self.bits_for_norm)).next_power_of_two()
-                - 1)
-            + 2;
+        // XXX
+        let proof_gadget_0 = (self.gadget0_chunk_len * 2)
+            + 3 * ((1 + self.gadget0_calls).next_power_of_two() - 1)
+            + 1;
         let proof_gadget_1 = 2 * ((1 + self.entries).next_power_of_two() - 1) + 2;
         proof_gadget_0 + proof_gadget_1
     }
 
     fn verifier_len(&self) -> usize {
-        5
+        self.gadget0_chunk_len * 2 + 4
     }
 
     fn output_len(&self) -> usize {
@@ -451,7 +483,7 @@ where
     }
 
     fn prove_rand_len(&self) -> usize {
-        2
+        self.gadget0_chunk_len * 2 + 1
     }
 
     fn query_rand_len(&self) -> usize {
