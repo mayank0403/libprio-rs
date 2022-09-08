@@ -257,7 +257,7 @@ pub trait Type: Sized + Eq + Clone + Debug {
                     return Err(FlpError::Prove(format!(
                         "short prove randomness: got {}; want {}",
                         prove_rand.len(),
-                        self.prove_rand_len()
+                        prove_rand_len + inner_arity // self.prove_rand_len()
                     )));
                 }
 
