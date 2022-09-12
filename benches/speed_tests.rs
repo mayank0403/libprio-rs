@@ -2,8 +2,6 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use fixed::types::extra::U15;
-use fixed::FixedI16;
 use fixed_macro::fixed;
 use prio::benchmarked::*;
 #[cfg(feature = "prio2")]
@@ -14,9 +12,8 @@ use prio::encrypt::PublicKey;
 use prio::field::{random_vector, Field128 as F, FieldElement};
 #[cfg(feature = "multithreaded")]
 use prio::flp::gadgets::ParallelSumMultithreaded;
-use prio::flp::types::fixedpoint_l2::FixedPointBoundedL2VecSum;
 use prio::flp::{
-    gadgets::{BlindPolyEval, Mul, ParallelSum, PolyEval},
+    gadgets::{BlindPolyEval, Mul, ParallelSum},
     types::CountVec,
     Type,
 };
@@ -192,215 +189,63 @@ pub fn count_vec(c: &mut Criterion) {
 /// Benchmark prio3 client performance.
 pub fn prio3_client(c: &mut Criterion) {
     let num_shares = 2;
+
+    let prio3 = Prio3::new_aes128_count(num_shares).unwrap();
+    let measurement = 1;
+    println!(
+        "prio3 count share size = {}",
+        prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
+    );
+    c.bench_function("prio3 count", |b| {
+        b.iter(|| {
+            prio3.shard(&1).unwrap();
+        })
+    });
+
+    let buckets: Vec<u64> = (1..10).collect();
+    let prio3 = Prio3::new_aes128_histogram(num_shares, &buckets).unwrap();
+    let measurement = 17;
+    println!(
+        "prio3 histogram ({} buckets) share size = {}",
+        buckets.len() + 1,
+        prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
+    );
+    c.bench_function(
+        &format!("prio3 histogram ({} buckets)", buckets.len() + 1),
+        |b| {
+            b.iter(|| {
+                prio3.shard(&measurement).unwrap();
+            })
+        },
+    );
+
+    let bits = 32;
+    let prio3 = Prio3::new_aes128_sum(num_shares, bits).unwrap();
+    let measurement = 1337;
+    println!(
+        "prio3 sum ({} bits) share size = {}",
+        bits,
+        prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
+    );
+    c.bench_function(&format!("prio3 sum ({} bits)", bits), |b| {
+        b.iter(|| {
+            prio3.shard(&measurement).unwrap();
+        })
+    });
+
     let len = 1000;
-    {
-        let prio3 = Prio3::new_aes128_count(num_shares).unwrap();
-        let measurement = 1;
-        println!(
-            "prio3 count share size = {}",
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
-        );
-        c.bench_function("prio3 count", |b| {
-            b.iter(|| {
-                prio3.shard(&1).unwrap();
-            })
-        });
-    }
-
-    {
-        let buckets: Vec<u64> = (1..10).collect();
-        let prio3 = Prio3::new_aes128_histogram(num_shares, &buckets).unwrap();
-        let measurement = 17;
-        println!(
-            "prio3 histogram ({} buckets) share size = {}",
-            buckets.len() + 1,
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
-        );
-        c.bench_function(
-            &format!("prio3 histogram ({} buckets)", buckets.len() + 1),
-            |b| {
-                b.iter(|| {
-                    prio3.shard(&measurement).unwrap();
-                })
-            },
-        );
-    }
-
-    {
-        type BenchType = FixedPointBoundedL2VecSum<
-            FixedI16<U15>,
-            F,
-            ParallelSum<F, PolyEval<F>>,
-            ParallelSum<F, BlindPolyEval<F>>,
-        >;
-        let bl2_vecsum: BenchType = FixedPointBoundedL2VecSum::new(len).unwrap();
-        let joint_rand = random_vector(bl2_vecsum.joint_rand_len()).unwrap();
-        let prove_rand = random_vector(bl2_vecsum.prove_rand_len()).unwrap();
-        let input = vec![F::zero(); 16030];
-        let proof = bl2_vecsum
-            .prove(input.as_slice(), &prove_rand, &joint_rand)
-            .unwrap();
-
-        println!(
-            "prio3 fixedpoint16 boundedl2 parallel proof size={}\n",
-            proof.len()
-        );
-
-        c.bench_function(
-            &format!("prio3 fixedpoint16 boundedl2 parallel prove, size={}", len),
-            |b| {
-                b.iter(|| {
-                    let prove_rand = random_vector(bl2_vecsum.prove_rand_len()).unwrap();
-                    bl2_vecsum
-                        .prove(input.as_slice(), &prove_rand, &joint_rand)
-                        .unwrap();
-                })
-            },
-        );
-
-        c.bench_function(
-            &format!("prio3 fixedpoint16 boundedl2 parallel query, size={}", len),
-            |b| {
-                b.iter(|| {
-                    let query_rand = random_vector(bl2_vecsum.query_rand_len()).unwrap();
-                    bl2_vecsum
-                        .query(input.as_slice(), &proof, &query_rand, &joint_rand, 1)
-                        .unwrap();
-                })
-            },
-        );
-    }
-
-    {
-        type BenchType = FixedPointBoundedL2VecSum<
-            FixedI16<U15>,
-            F,
-            ParallelSumMultithreaded<F, PolyEval<F>>,
-            ParallelSumMultithreaded<F, BlindPolyEval<F>>,
-        >;
-        let bl2_vecsum: BenchType = FixedPointBoundedL2VecSum::new(len).unwrap();
-        let joint_rand = random_vector(bl2_vecsum.joint_rand_len()).unwrap();
-        let prove_rand = random_vector(bl2_vecsum.prove_rand_len()).unwrap();
-        let input = vec![F::zero(); 16030];
-        let proof = bl2_vecsum
-            .prove(input.as_slice(), &prove_rand, &joint_rand)
-            .unwrap();
-
-        println!(
-            "prio3 fixedpoint16 boundedl2 parallel multithreaded proof size={}\n",
-            proof.len()
-        );
-
-        c.bench_function(
-            &format!(
-                "prio3 fixedpoint16 boundedl2 parallel multithreaded prove, size={}",
-                len
-            ),
-            |b| {
-                b.iter(|| {
-                    let prove_rand = random_vector(bl2_vecsum.prove_rand_len()).unwrap();
-                    bl2_vecsum
-                        .prove(input.as_slice(), &prove_rand, &joint_rand)
-                        .unwrap();
-                })
-            },
-        );
-
-        c.bench_function(
-            &format!(
-                "prio3 fixedpoint16 boundedl2 parallel multithreaded query, size={}",
-                len
-            ),
-            |b| {
-                b.iter(|| {
-                    let query_rand = random_vector(bl2_vecsum.query_rand_len()).unwrap();
-                    bl2_vecsum
-                        .query(input.as_slice(), &proof, &query_rand, &joint_rand, 1)
-                        .unwrap();
-                })
-            },
-        );
-    }
-
-    {
-        let prio3 = Prio3::new_aes128_fixedpoint_boundedl2_vec_sum(num_shares, len).unwrap();
-        println!("successfully constructed.");
-        let fp_num = fixed!(0.0001: I1F15);
-        let measurement = vec![fp_num; len];
-        println!(
-            "prio3 fixedpoint16 boundedl2 vec parallel ({} entries) size = {}",
-            len,
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
-        );
-        c.bench_function(
-            &format!(
-                "prio3 fixedpoint16 boundedl2 vec parallel ({} entries)",
-                len
-            ),
-            |b| {
-                b.iter(|| {
-                    prio3.shard(&measurement).unwrap();
-                })
-            },
-        );
-    }
-
-    #[cfg(feature = "multithreaded")]
-    {
-        let prio3 =
-            Prio3::new_aes128_fixedpoint_boundedl2_vec_sum_multithreaded(num_shares, len).unwrap();
-        println!("successfully constructed.");
-        let fp_num = fixed!(0.0001: I1F15);
-        let measurement = vec![fp_num; len];
-        println!(
-            "prio3 fixedpoint16 boundedl2 vec parallel multithreaded ({} entries) size = {}",
-            len,
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
-        );
-        c.bench_function(
-            &format!(
-                "prio3 fixedpoint16 boundedl2 vec parallel multithreaded ({} entries)",
-                len
-            ),
-            |b| {
-                b.iter(|| {
-                    prio3.shard(&measurement).unwrap();
-                })
-            },
-        );
-    }
-
-    {
-        let bits = 32;
-        let prio3 = Prio3::new_aes128_sum(num_shares, bits).unwrap();
-        let measurement = 1337;
-        println!(
-            "prio3 sum ({} bits) share size = {}",
-            bits,
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
-        );
-        c.bench_function(&format!("prio3 sum ({} bits)", bits), |b| {
-            b.iter(|| {
-                prio3.shard(&measurement).unwrap();
-            })
-        });
-    }
-
-    {
-        let len = 1000;
-        let prio3 = Prio3::new_aes128_count_vec(num_shares, len).unwrap();
-        let measurement = vec![0; len];
-        println!(
-            "prio3 countvec ({} len) share size = {}",
-            len,
-            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
-        );
-        c.bench_function(&format!("prio3 countvec ({} len)", len), |b| {
-            b.iter(|| {
-                prio3.shard(&measurement).unwrap();
-            })
-        });
-    }
+    let prio3 = Prio3::new_aes128_count_vec(num_shares, len).unwrap();
+    let measurement = vec![0; len];
+    println!(
+        "prio3 countvec ({} len) share size = {}",
+        len,
+        prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
+    );
+    c.bench_function(&format!("prio3 countvec ({} len)", len), |b| {
+        b.iter(|| {
+            prio3.shard(&measurement).unwrap();
+        })
+    });
 
     #[cfg(feature = "multithreaded")]
     {
@@ -416,6 +261,49 @@ pub fn prio3_client(c: &mut Criterion) {
                 prio3.shard(&measurement).unwrap();
             })
         });
+    }
+
+    let len = 1000;
+    let prio3 = Prio3::new_aes128_fixedpoint_boundedl2_vec_sum(num_shares, len).unwrap();
+    println!("successfully constructed.");
+    let fp_num = fixed!(0.0001: I1F15);
+    let measurement = vec![fp_num; len];
+    println!(
+        "prio3 fixedpoint16 boundedl2 vec ({} entries) size = {}",
+        len,
+        prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
+    );
+    c.bench_function(
+        &format!("prio3 fixedpoint16 boundedl2 vec ({} entries)", len),
+        |b| {
+            b.iter(|| {
+                prio3.shard(&measurement).unwrap();
+            })
+        },
+    );
+
+    #[cfg(feature = "multithreaded")]
+    {
+        let prio3 =
+            Prio3::new_aes128_fixedpoint_boundedl2_vec_sum_multithreaded(num_shares, len).unwrap();
+        let fp_num = fixed!(0.0001: I1F15);
+        let measurement = vec![fp_num; len];
+        println!(
+            "prio3 fixedpoint16 boundedl2 vec multithreaded ({} entries) size = {}",
+            len,
+            prio3_input_share_size(&prio3.shard(&measurement).unwrap().1)
+        );
+        c.bench_function(
+            &format!(
+                "prio3 fixedpoint16 boundedl2 vec multithreaded ({} entries)",
+                len
+            ),
+            |b| {
+                b.iter(|| {
+                    prio3.shard(&measurement).unwrap();
+                })
+            },
+        );
     }
 }
 
