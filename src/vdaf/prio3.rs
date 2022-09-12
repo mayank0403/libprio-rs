@@ -131,7 +131,7 @@ impl Prio3Aes128Sum {
 }
 
 /// The fixed point vector sum type. Each measurement is a vector of fixed point numbers
-/// and the aggregate is the sum represented as 64-bit floats. The verification function
+/// and the aggregate is the sum represented as 64-bit floats. The preparation phase
 /// ensures the L2 norm of the input vector is < 1.
 ///
 /// This is useful for aggregating gradients in a federated version of
@@ -163,7 +163,6 @@ impl<Fx: Fixed + CompatibleFloat<Field128>> Prio3Aes128FixedPointBoundedL2VecSum
         entries: usize,
     ) -> Result<Self, VdafError> {
         check_num_aggregators(num_aggregators)?;
-
         Prio3::new(num_aggregators, FixedPointBoundedL2VecSum::new(entries)?)
     }
 }
@@ -196,7 +195,6 @@ impl<Fx: Fixed + CompatibleFloat<Field128>> Prio3Aes128FixedPointBoundedL2VecSum
         entries: usize,
     ) -> Result<Self, VdafError> {
         check_num_aggregators(num_aggregators)?;
-
         Prio3::new(num_aggregators, FixedPointBoundedL2VecSum::new(entries)?)
     }
 }

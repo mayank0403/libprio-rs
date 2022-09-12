@@ -88,8 +88,8 @@
 //!                                         |                      |
 //!                     fractions with denom of 2^(n-1)     fractions with denom of 2^(2n-2)
 //! ```
-//! (note that the ranges on the LHS and RHS of `"mult with 2^(2n-2)"` are stated
-//!  here for vectors with a norm less than `1`)
+//! (Note that the ranges on the LHS and RHS of `"mult with 2^(2n-2)"` are stated
+//! here for vectors with a norm less than `1`.)
 //!
 //! Given a vector `ys` of numbers in the field integer encoding (in `[0,2^n)`),
 //! this gives the following equation:
@@ -218,7 +218,6 @@ where
     /// fixed point vector with `entries` entries.
     pub fn new(entries: usize) -> Result<Self, FlpError> {
         // (0) initialize constants
-
         let fi_one = F::Integer::from(F::one());
         let fi_two = fi_one + fi_one;
 
@@ -288,7 +287,7 @@ where
         // the constant part is 2^(2n-2),
         // the polynomial is:
         //   p(y) = 2^(2n-2) + -(2^n) * y + 1 * y^2
-        let linear_part = fi_one << (fi_bits_per_entry);
+        let linear_part = fi_one << fi_bits_per_entry;
         let constant_part = fi_one << (fi_bits_per_entry + fi_bits_per_entry - fi_two);
         let norm_summand_poly = vec![F::from(constant_part), -F::from(linear_part), F::one()];
 
@@ -450,9 +449,9 @@ where
 
         // Ensure that all submitted field elements are either 0 or 1.
         // This is done for:
-        //  - all vector entries (each of them encoded in `self.bits_per_entry`
-        //    field elements)
-        //  - the submitted norm (encoded in `self.bits_for_norm` field
+        //  (I) all vector entries (each of them encoded in `self.bits_per_entry`
+        //     field elements)
+        //  (II) the submitted norm (encoded in `self.bits_for_norm` field
         //    elements)
         //
         // Since all input vector entry (field-)bits, as well as the norm bits,
@@ -461,9 +460,7 @@ where
         //
         // In order to keep the proof size down, this is done using the
         // `ParallelSum` gadget. For a similar application see the `CountVec`
-        // prio3 type.
-        //
-        // Check that each element is a 0 or 1:
+        // type.
         let mut r = joint_rand[0];
         let mut range_check = F::zero();
         let mut padded_chunk = vec![F::zero(); 2 * self.gadget0_chunk_len];
@@ -511,7 +508,6 @@ where
 
             for chunk in decoded_entries?.chunks(self.gadget1_chunk_len) {
                 let d = chunk.len();
-
                 if d == self.gadget1_chunk_len {
                     outp += g[1].call(chunk)?;
                 } else {
@@ -562,7 +558,6 @@ where
         // computed via
         // `gadget.arity() + gadget.degree()
         //   * ((1 + gadget.calls()).next_power_of_two() - 1) + 1;`
-
         let proof_gadget_0 = (self.gadget0_chunk_len * 2)
             + 3 * ((1 + self.gadget0_calls).next_power_of_two() - 1)
             + 1;
@@ -610,12 +605,12 @@ where
     //
     // Check out the norm computation bit in the explanatory comment block for
     // more information.
-
+       //
     // Initialize `norm_accumulator`.
     let mut norm_accumulator = F::zero();
 
     // constants
-    let linear_part = fi_one << (fi_bits_per_entry); // = 2^(2n-2)
+    let linear_part = fi_one << fi_bits_per_entry; // = 2^(2n-2)
     let constant_part = fi_one << (fi_bits_per_entry + fi_bits_per_entry - fi_two); // = 2^n
 
     // Add term for a given `entry` to `norm_accumulator`.
