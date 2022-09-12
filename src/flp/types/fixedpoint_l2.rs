@@ -374,23 +374,23 @@ where
         // Convert the fixed-point encoded input values to field integers. We do
         // this once here because we need them for encoding but also for
         // computing the norm.
-        let integer_entries: Vec<_> = fp_entries.iter().map(|x| x.to_field_integer()).collect();
+        let integer_entries = fp_entries.iter().map(|x| x.to_field_integer());
 
         // (I) Vector entries.
         // Encode the integer entries bitwise, and write them into the `encoded`
         // vector.
         let mut encoded: Vec<F> =
             vec![F::zero(); self.bits_per_entry * self.entries + self.bits_for_norm];
-        for (l, entry) in integer_entries.iter().enumerate() {
+        for (l, entry) in integer_entries.clone().enumerate() {
             F::fill_with_bitvector_representation(
-                entry,
+                &entry,
                 &mut encoded[l * self.bits_per_entry..(l + 1) * self.bits_per_entry],
             )?;
         }
 
         // (II) Vector norm.
         // Compute the norm of the input vector.
-        let field_entries = integer_entries.iter().map(|&x| F::from(x));
+        let field_entries = integer_entries.map(|x| F::from(x));
         let norm = compute_norm_of_entries(field_entries, self.fi_bits_per_entry)?;
         let norm_int = <F as FieldElement>::Integer::from(norm);
 
@@ -431,8 +431,7 @@ where
             self.gadget1_chunk_len,
         );
 
-        let res: Vec<Box<dyn Gadget<F>>> = vec![Box::new(gadget0), Box::new(gadget1)];
-        res
+        vec![Box::new(gadget0), Box::new(gadget1)]
     }
 
     fn valid(
@@ -482,7 +481,7 @@ where
                     padded_chunk[2 * i + 1] = r * constant_part_multiplier;
                     r *= joint_rand[0];
                 }
-    
+
                 outp += g[0].call(&padded_chunk)?;
             }
 
