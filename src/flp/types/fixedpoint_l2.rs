@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! A [`Type`] for summing vectors of fixed point numbers whose
-//! [L2 norm](https://en.wikipedia.org/wiki/Norm_(mathematics)#Euclidean_norm) is
-//! bounded by `1`.
+//! A [`Type`] for summing vectors of fixed point numbers where the
+//! [L2 norm](https://en.wikipedia.org/wiki/Norm_(mathematics)#Euclidean_norm)
+//! of each vector is bounded by `1`.
 //!
 //! In the following a high level overview over the inner workings of this type
 //! is given and implementation details are discussed. It is not necessary for
-//! using the type, but it should be very helpful when trying to understand the
+//! using the type, but it should be helpful when trying to understand the
 //! implementation.
 //!
 //! ### Overview
@@ -35,7 +35,7 @@
 //!    This means that instead of sending a field element in the range `[0,2^n)`,
 //!    we send `n` field elements representing the bit encoding. The validation
 //!    circuit can verify that all submitted "bits" are indeed either `0` or `1`.
-//! 4. The computed and submitted norms are treated very similar to the vector
+//! 4. The computed and submitted norms are treated similar to the vector
 //!    entries, but they have a different number of bits, namely `2n-2`.
 //! 5. As the aggregation result is a pointwise sum of the client vectors,
 //!    the numbers no longer (semantically) lie in the range `[-1,1)`, and cannot
@@ -144,17 +144,13 @@
 //!                                     \- the encoded norm
 //! ```
 //!
-//! ### Validity
-//!
-//! In addition to checking that every submission entry is `0` or `1`, the validation
-//! circuit of this type computes the norm and compares to what the client
-//! claimed.
-//!
 //! ### Value `1`
 //!
 //! We actually do not allow the submitted norm or vector entries to be
 //! exactly `1`, but rather require them to be strictly less. Supporting `1` would
 //! entail a more fiddly encoding and is not necessary for our usecase.
+//! The largest representable vector entry can be computed by `dec(2^n-1)`.
+//! For example, it is `0.999969482421875` for `n = 16`.
 
 pub mod compatible_float;
 
@@ -194,6 +190,7 @@ pub struct FixedPointBoundedL2VecSum<
     range_01_checker: Vec<F>,
     norm_summand_poly: Vec<F>,
     phantom: PhantomData<(T, SPoly, SBlindPoly)>,
+
     // range/position constants
     range_norm_begin: usize,
     range_norm_end: usize,
@@ -205,13 +202,12 @@ pub struct FixedPointBoundedL2VecSum<
     gadget1_chunk_len: usize,
 }
 
-impl<
-        T: Fixed,
-        F: FieldElement,
-        SPoly: ParallelSumGadget<F, PolyEval<F>>,
-        SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>>,
-    > FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
+impl<T, F, SPoly, SBlindPoly> FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
 where
+    T: Fixed,
+    F: FieldElement,
+    SPoly: ParallelSumGadget<F, PolyEval<F>>,
+    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>>,
     u128: TryFrom<F::Integer>,
 {
     /// Return a new [`FixedPointBoundedL2VecSum`] type parameter. Each value of this type is a
@@ -222,7 +218,7 @@ where
         let fi_two = fi_one + fi_one;
 
         // (I) Check that the fixed type `F` is compatible.
-
+        //
         // We only support fixed types that encode values in [-1,1].
         // These have a single integer bit.
         if <T as Fixed>::INT_NBITS != 1 {
@@ -247,7 +243,7 @@ where
             .map_err(|_| FlpError::Encode("Could not create FieldInteger from usize even though size check was successful".to_string()))?;
 
         // (II) Check that the field is large enough for the norm.
-
+        //
         // Valid norms encoded as field integers lie in [0,2^(2*bits - 2)).
         let bits_for_norm = 2 * bits_per_entry - 2;
         if !F::valid_integer_bitlength(bits_for_norm) {
@@ -328,12 +324,12 @@ where
     }
 }
 
-impl<
-        T: Fixed,
-        F: FieldElement,
-        SPoly: ParallelSumGadget<F, PolyEval<F>>,
-        SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>>,
-    > Clone for FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
+impl<T, F, SPoly, SBlindPoly> Clone for FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
+where
+    T: Fixed,
+    F: FieldElement,
+    SPoly: ParallelSumGadget<F, PolyEval<F>>,
+    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>>,
 {
     fn clone(&self) -> Self {
         Self {
