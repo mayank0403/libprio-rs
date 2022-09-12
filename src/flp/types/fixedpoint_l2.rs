@@ -613,7 +613,7 @@ where
     //
     // Check out the norm computation bit in the explanatory comment block for
     // more information.
-       //
+    //
     // Initialize `norm_accumulator`.
     let mut norm_accumulator = F::zero();
 
