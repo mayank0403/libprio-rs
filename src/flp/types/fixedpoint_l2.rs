@@ -407,7 +407,7 @@ where
         if data.len() != self.entries {
             return Err(FlpError::Decode("unexpected input length".into()));
         }
-        let mut res = vec![];
+        let mut res = Vec::with_capacity(data.len());
         for d in data {
             let decoded = <T as CompatibleFloat<F>>::to_float(*d, num_measurements);
             res.push(decoded);
@@ -461,25 +461,33 @@ where
         // In order to keep the proof size down, this is done using the
         // `ParallelSum` gadget. For a similar application see the `CountVec`
         // type.
-        let mut r = joint_rand[0];
-        let mut range_check = F::zero();
-        let mut padded_chunk = vec![F::zero(); 2 * self.gadget0_chunk_len];
-        for chunk in input[..self.range_norm_end].chunks(self.gadget0_chunk_len) {
-            let d = chunk.len();
-            for i in 0..self.gadget0_chunk_len {
-                if i < d {
-                    padded_chunk[2 * i] = chunk[i];
-                } else {
-                    // If the chunk is smaller than the chunk length, then copy the last element of
-                    // the chunk into the remaining slots.
-                    padded_chunk[2 * i] = chunk[d - 1];
+        let range_check = {
+            let mut outp = F::zero();
+            let mut r = joint_rand[0];
+            let mut padded_chunk = vec![F::zero(); 2 * self.gadget0_chunk_len];
+
+            for chunk in input[..self.range_norm_end].chunks(self.gadget0_chunk_len) {
+                let d = chunk.len();
+                // We use the BlindPolyEval gadget, so the chunk needs to have
+                // the i-th input at position 2*i and it's random factor at po-
+                // sition 2*i+1.
+                for i in 0..self.gadget0_chunk_len {
+                    if i < d {
+                        padded_chunk[2 * i] = chunk[i];
+                    } else {
+                        // If the chunk is smaller than the padded_chunk length,
+                        // copy the last element into all remaining slots.
+                        padded_chunk[2 * i] = chunk[d - 1];
+                    }
+                    padded_chunk[2 * i + 1] = r * constant_part_multiplier;
+                    r *= joint_rand[0];
                 }
-                padded_chunk[2 * i + 1] = r * constant_part_multiplier;
-                r *= joint_rand[0];
+    
+                outp += g[0].call(&padded_chunk)?;
             }
 
-            range_check += g[0].call(&padded_chunk)?;
-        }
+            outp
+        };
 
         // Compute the norm of the entries and ensure that it is the same as the
         // submitted norm. There are exactly enough bits such that a submitted

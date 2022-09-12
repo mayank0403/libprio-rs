@@ -137,7 +137,7 @@ impl Prio3Aes128Sum {
 /// This is useful for aggregating gradients in a federated version of
 /// [gradient descent](https://en.wikipedia.org/wiki/Gradient_descent) with
 /// [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy),
-/// useful e.g. for [differentially private deep learning](https://arxiv.org/pdf/1607.00133.pdf).
+/// useful, e.g., for [differentially private deep learning](https://arxiv.org/pdf/1607.00133.pdf).
 /// The bound on input norms is required for differential privacy. The fixed point representation
 /// allows an easy conversion to the integer type used in internal computation, while leaving
 /// conversion to the client. The model itself will have floating point parameters, so the output
