@@ -176,7 +176,7 @@ use std::{convert::TryFrom, convert::TryInto, fmt::Debug, marker::PhantomData};
 /// to be chosen for `F`. For a `n`-bit fixed point type and a `d`-dimensional vector, the field
 /// modulus needs to be larger than `d * 2^(2n-2)` so there are no overflows during norm validity
 /// computation.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixedPointBoundedL2VecSum<
     T: Fixed,
     F: FieldElement,
@@ -206,8 +206,8 @@ impl<T, F, SPoly, SBlindPoly> FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
 where
     T: Fixed,
     F: FieldElement,
-    SPoly: ParallelSumGadget<F, PolyEval<F>>,
-    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>>,
+    SPoly: ParallelSumGadget<F, PolyEval<F>> + Clone,
+    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>> + Clone,
     u128: TryFrom<F::Integer>,
 {
     /// Return a new [`FixedPointBoundedL2VecSum`] type parameter. Each value of this type is a
@@ -324,42 +324,12 @@ where
     }
 }
 
-impl<T, F, SPoly, SBlindPoly> Clone for FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
-where
-    T: Fixed,
-    F: FieldElement,
-    SPoly: ParallelSumGadget<F, PolyEval<F>>,
-    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>>,
-{
-    fn clone(&self) -> Self {
-        Self {
-            bits_per_entry: self.bits_per_entry,
-            fi_bits_per_entry: self.fi_bits_per_entry,
-            entries: self.entries,
-            bits_for_norm: self.bits_for_norm,
-            range_01_checker: self.range_01_checker.clone(),
-            norm_summand_poly: self.norm_summand_poly.clone(),
-            phantom: PhantomData,
-
-            // range constants
-            range_norm_begin: self.range_norm_begin,
-            range_norm_end: self.range_norm_end,
-
-            // configuration of parallel sum gadgets
-            gadget0_calls: self.gadget0_calls,
-            gadget0_chunk_len: self.gadget0_chunk_len,
-            gadget1_calls: self.gadget1_calls,
-            gadget1_chunk_len: self.gadget1_chunk_len,
-        }
-    }
-}
-
 impl<T, F, SPoly, SBlindPoly> Type for FixedPointBoundedL2VecSum<T, F, SPoly, SBlindPoly>
 where
     T: Fixed + CompatibleFloat<F>,
     F: FieldElement,
-    SPoly: ParallelSumGadget<F, PolyEval<F>> + Eq + 'static,
-    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>> + Eq + 'static,
+    SPoly: ParallelSumGadget<F, PolyEval<F>> + Eq + Clone + 'static,
+    SBlindPoly: ParallelSumGadget<F, BlindPolyEval<F>> + Eq + Clone + 'static,
 {
     const ID: u32 = 0xFFFF0000;
     type Measurement = Vec<T>;

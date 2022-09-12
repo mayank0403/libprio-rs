@@ -1208,8 +1208,8 @@ mod tests {
             prio3: Prio3<FixedPointBoundedL2VecSum<Fx, Field128, PE, BPE>, PrgAes128, 16>,
         ) where
             Fx: Fixed + CompatibleFloat<Field128> + std::ops::Neg<Output = Fx>,
-            PE: Eq + ParallelSumGadget<Field128, PolyEval<Field128>> + 'static,
-            BPE: Eq + ParallelSumGadget<Field128, BlindPolyEval<Field128>> + 'static,
+            PE: Eq + ParallelSumGadget<Field128, PolyEval<Field128>> + Clone + 'static,
+            BPE: Eq + ParallelSumGadget<Field128, BlindPolyEval<Field128>> + Clone + 'static,
         {
             let fp_vec1 = vec![fp_4_inv, fp_8_inv, fp_16_inv];
             let fp_vec2 = vec![fp_4_inv, fp_8_inv, fp_16_inv];
