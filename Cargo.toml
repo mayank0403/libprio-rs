@@ -54,9 +54,6 @@ multithreaded = ["rayon"]
 prio2 = ["aes-gcm", "ring"]
 crypto-dependencies = ["aes", "ctr", "cmac"]
 
-[workspace]
-members = [".", "binaries"]
-
 [[bench]]
 name = "speed_tests"
 harness = false

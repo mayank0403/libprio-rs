@@ -22,7 +22,7 @@ mod fft;
 pub mod field;
 pub mod flp;
 mod fp;
-mod polynomial;
+pub mod polynomial;
 mod prng;
 // Module test_vector depends on crate `rand` so we make it an optional feature
 // to spare most clients the extra dependency.
