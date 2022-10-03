@@ -23,7 +23,7 @@ pub mod field;
 pub mod flp;
 mod fp;
 pub mod polynomial;
-mod prng;
+pub mod prng;
 // Module test_vector depends on crate `rand` so we make it an optional feature
 // to spare most clients the extra dependency.
 #[cfg(all(any(feature = "test-util", test), feature = "prio2"))]
