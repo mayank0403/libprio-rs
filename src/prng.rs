@@ -71,7 +71,7 @@ where
         }
     }
 
-    pub(crate) fn get(&mut self) -> F {
+    pub fn get(&mut self) -> F {
         loop {
             // Seek to the next chunk of the buffer that encodes an element of F.
             for i in (self.buffer_index..self.buffer.len()).step_by(F::ENCODED_SIZE) {
