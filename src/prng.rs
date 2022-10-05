@@ -40,7 +40,7 @@ impl<F: FieldElement> Prng<F, SeedStreamAes128> {
     /// Create a [`Prng`] from a seed for Prio 2. The first 16 bytes of the seed and the last 16
     /// bytes of the seed are used, respectively, for the key and initialization vector for AES128
     /// in CTR mode.
-    pub(crate) fn from_prio2_seed(seed: &[u8; 32]) -> Self {
+    pub fn from_prio2_seed(seed: &[u8; 32]) -> Self {
         let seed_stream = SeedStreamAes128::new(&seed[..16], &seed[16..]);
         Self::from_seed_stream(seed_stream)
     }
